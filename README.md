@@ -4,6 +4,8 @@
 
 This is a fork of Lunzir's excellent [BazaarIsMyHome](https://thunderstore.io/package/Lunzir2/BazaarIsMyHome/) mod.
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E71PHUJ2)
+
 ## Features
 
 - **Extra Interactables in the Bazaar** (configurable):
@@ -15,6 +17,7 @@ This is a fork of Lunzir's excellent [BazaarIsMyHome](https://thunderstore.io/pa
   - Cleansing Pool
   - Shrine of Order
   - Donation Altar
+  - Wandering Chef
 
 - **Newt Behavior Options**:
   - Stop him from throwing you out.
