@@ -239,21 +239,25 @@ namespace BazaarIsMyHaven
 
         private void SpawnState_OnEnter(On.EntityStates.NewtMonster.SpawnState.orig_OnEnter orig, EntityStates.NewtMonster.SpawnState self)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.NewtSectionEnabled.Value && NetworkServer.active && NetworkServer.active)
+            if (IsCurrentMapInBazaar()) //Apperently SPEX is a Newt this should prevent the welcome message from playing in the computational exchange
             {
-                if (ModConfig.NewtGreeting.Value)
+                if (ModConfig.EnableMod.Value && ModConfig.NewtSectionEnabled.Value && NetworkServer.active && NetworkServer.active)
                 {
-                    StartCoroutine(ShopWelcomeWord());
-                }
+                    if (ModConfig.NewtGreeting.Value)
+                    {
+                        StartCoroutine(ShopWelcomeWord());
+                    }
 
-                if (ShopKeeper.Body is null) FindShopkeeper();
+                    if (ShopKeeper.Body is null) FindShopkeeper();
 
-                if (ModConfig.NewtDeathBehavior.Value != ShopKeeper.DeathState.Default)
-                {
-                    ShopKeeper.Body.inventory.GiveItem(ItemCatalog.GetItemDef(ItemCatalog.FindItemIndex("ExtraLife")), 1000);
-                    ShopKeeper.Body.inventory.GiveItem(ItemCatalog.GetItemDef(ItemCatalog.FindItemIndex("CutHp")), 200);
+                    if (ModConfig.NewtDeathBehavior.Value != ShopKeeper.DeathState.Default)
+                    {
+                        ShopKeeper.Body.inventory.GiveItemPermanent(ItemCatalog.GetItemDef(ItemCatalog.FindItemIndex("ExtraLife")), 1000);
+                        ShopKeeper.Body.inventory.GiveItemPermanent(ItemCatalog.GetItemDef(ItemCatalog.FindItemIndex("CutHp")), 200);
+                    }
                 }
             }
+            
             orig(self);
         }
 
