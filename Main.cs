@@ -108,6 +108,10 @@ namespace BazaarIsMyHaven
             orig(self);
             if (ModConfig.EnableMod.Value && NetworkServer.active)
             {
+                //Allows the Config to be-reread without having to restart game on a new run without any other aditional mods
+                Config.Reload();
+			    ModConfig.InitConfig(Config);
+                
                 foreach (var bazaarMod in bazaarMods)
                 {
                     bazaarMod.RunStart();
