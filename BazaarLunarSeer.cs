@@ -1,6 +1,5 @@
 ﻿using BepInEx;
 using RoR2;
-using ShareSuite.Networking;
 using System;
 using System.Collections;
 using System.Collections.Generic;

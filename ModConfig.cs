@@ -43,10 +43,6 @@ namespace BazaarIsMyHaven
         public static ConfigEntry<float> CauldronWhiteToGreenWeight;
         public static ConfigEntry<float> CauldronGreenToRedWeight;
         public static ConfigEntry<float> CauldronRedToWhiteWeight;
-        public static ConfigEntry<float> CauldronRedToYellowWeight;
-        public static ConfigEntry<float> CauldronGreenToYellowWeight;
-        public static ConfigEntry<float> CauldronGreenToPurpleWeight;
-        public static ConfigEntry<float> CauldronRedToPurpleWeight;
         public static ConfigEntry<int> CauldronWhiteToGreenCost;
         public static ConfigEntry<int> CauldronGreenToRedCost;
         public static ConfigEntry<int> CauldronRedToWhiteCost;
@@ -79,7 +75,6 @@ namespace BazaarIsMyHaven
         public static Dictionary<BodyIndex, int> LunarShopAmountDependingOnCharacterParsed = new Dictionary<BodyIndex, int>();
 
         // lunarRecycler
-        public static ConfigEntry<bool> LunarRecyclerSectionEnabled;
         public static ConfigEntry<bool> LunarRecyclerAvailable;
         public static ConfigEntry<int> LunarRecyclerCost;
         public static ConfigEntry<int> LunarRecyclerCostMultiplier;
@@ -161,9 +156,7 @@ namespace BazaarIsMyHaven
             CauldronGreenToRedCost = config.Bind("03 Cauldron", "GreenToRedCost", 5, "Number of Green items required for Red conversion.");
             CauldronRedToWhiteWeight = config.Bind("03 Cauldron", "RedToWhiteWeight", 0f, "Weight for Red->White cauldrons.");
             CauldronRedToWhiteCost = config.Bind("03 Cauldron", "RedToWhiteCost", 1, "Number of Red items required for White conversion.");
-            // TODO
-            //CauldronGreenToYellowWeight = config.Bind("03 Cauldron", "CauldronGreenToYellowWeight", 0.33f, "Spawn weight for Yellow cauldrons (uses Green items as cost)."); CauldronGreenToYellowWeight.Value = Math.Abs(CauldronGreenToYellowWeight.Value);
-            //CauldronGreenToPurpleWeight = config.Bind("03 Cauldron", "CauldronGreenToPurpleWeight", 0.33f, "Spawn weight for Purple cauldrons (uses Green items as cost)."); CauldronGreenToPurpleWeight.Value = Math.Abs(CauldronGreenToPurpleWeight.Value);
+            // TODO: Add yellow and purple cauldron conversions.
 
             // 04 Scrapper
             ScrapperSectionEnabled = config.Bind("04 Scrapper", "SectionEnabled", true, "Enables or disables the Scrapper section.");
@@ -234,7 +227,7 @@ namespace BazaarIsMyHaven
             LunarShopAmountDependingOnCharacter.SettingChanged += updateConfig;
             updateConfig.Invoke(null, null);
 
-            // 07 LunarRecycler
+            // Recycler settings share the Lunar Shop section and its SectionEnabled switch.
             LunarRecyclerAvailable = config.Bind("06 LunarShop", "LunarRecyclerAvailable", true, "If enabled, a Lunar Recycler is available in the Bazaar. Otherwise it will get removed.");
             LunarRecyclerRerollLimit = config.Bind("06 LunarShop", "LunarRecyclerRerollLimit", 3, "Limit the amount of rerolls allowed per visit to the Bazaar. -1 = Unlimited.");
             LunarRecyclerCost = config.Bind("06 LunarShop", "LunarRecyclerCost", 1, "Initial lunar coin cost to reroll.");

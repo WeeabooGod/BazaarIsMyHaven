@@ -1,6 +1,5 @@
 ﻿using BepInEx;
 using RoR2;
-using ShareSuite.Networking;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -53,7 +52,7 @@ namespace BazaarIsMyHaven
         }
         public override void SetupBazaar()
         {
-            if (ModConfig.LunarRecyclerSectionEnabled.Value)
+            if (ModConfig.LunarShopSectionEnabled.Value)
             {
                 lunarRecyclerRerolledCount = 0;
             }
@@ -77,7 +76,7 @@ namespace BazaarIsMyHaven
                         self.Networkcost = ModConfig.LunarShopCost.Value;
                     }
                 }
-                if (ModConfig.LunarRecyclerSectionEnabled.Value)
+                if (ModConfig.LunarShopSectionEnabled.Value)
                 {
                     if (self.name.StartsWith("LunarRecycler"))
                     {
@@ -159,7 +158,7 @@ namespace BazaarIsMyHaven
                         }
                     }
                 }
-                if (ModConfig.EnableMod.Value && ModConfig.LunarRecyclerSectionEnabled.Value && ModConfig.LunarRecyclerRerollLimit.Value >= 0 && IsCurrentMapInBazaar() && NetworkServer.active)
+                if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerRerollLimit.Value >= 0 && IsCurrentMapInBazaar() && NetworkServer.active)
                 {
                     if(self.name.StartsWith("LunarRecycler"))
                     {
@@ -173,7 +172,7 @@ namespace BazaarIsMyHaven
 
         private void PurchaseInteraction_ScaleCost(On.RoR2.PurchaseInteraction.orig_ScaleCost orig, PurchaseInteraction self, float scalar)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.LunarRecyclerSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
+            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
                 if (self.name.StartsWith("LunarRecycler"))
                 {
@@ -184,7 +183,7 @@ namespace BazaarIsMyHaven
         }
         private void PurchaseInteraction_SetAvailable(On.RoR2.PurchaseInteraction.orig_SetAvailable orig, PurchaseInteraction self, bool newAvailable)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.LunarRecyclerSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
+            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
                 if (self.name.StartsWith("LunarRecycler"))
                 {
@@ -298,7 +297,6 @@ namespace BazaarIsMyHaven
             Vector3 lunarTablePosition = new Vector3(-76.6438f, -24.0468f, -41.6449f);
             float orientation = 280f;
             Vector3 lunarTableDroneShopPosition = new Vector3(-139.8156f, -21.8568f, 2.9263f);
-            const float droneTableOrientation = 160f;
 
             const float tableRadiusInner = 3.0f;
             const float tableRadiusMiddle = 4.0f;
@@ -310,7 +308,6 @@ namespace BazaarIsMyHaven
             float tableEndAngleMiddle = 325f;
             float tableEndAngleOuter = 339f;
             
-            const float minDistance = 19f;
             const float middleCapacity = 10;
             const float maxCapacity = 20;
 

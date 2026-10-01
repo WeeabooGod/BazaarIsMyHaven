@@ -4,7 +4,6 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using R2API.Utils;
 using RoR2;
-using ShareSuite;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
