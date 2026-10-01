@@ -38,6 +38,8 @@ namespace BazaarIsMyHaven
             lunarShopBud = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/LunarShopTerminal/LunarShopTerminal.prefab");
             lunarShopTerminal = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC1/FreeChestTerminalShippingDrone/FreeChestTerminalShippingDrone.prefab");
             LunarRerollEffect = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/LunarRecycler/LunarRerollEffect.prefab");
+
+            LunarShopScaleSync.Preload();
         }
 
         public override void Hook()
@@ -460,6 +462,9 @@ namespace BazaarIsMyHaven
                 whichStallsHaveBeenBoughtOnce.Add(purchaseInteraction, new List<PlayerCharacterMasterController>());
                 //Main.instance.StartCoroutine(DelayRerollEffect(shopTerminalBehavior, 0.1f, false));
             }
+
+            // Both prefab choices use the same scale, regardless of purchase instancing.
+            LunarShopScaleSync.Apply(gameObjects);
         }
     }
 }
