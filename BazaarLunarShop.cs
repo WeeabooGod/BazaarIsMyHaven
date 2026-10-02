@@ -51,7 +51,7 @@ namespace BazaarIsMyHaven
         {
             On.RoR2.PurchaseInteraction.Awake += PurchaseInteraction_Awake;
             On.RoR2.PurchaseInteraction.OnInteractionBegin += PurchaseInteraction_OnInteractionBegin;
-            IL.RoR2.PurchaseInteraction.OnInteractionBegin += PurchaseInteraction_OnInteractionEnd;
+            //On.RoR2.PurchaseInteraction.OnInteractionBegin += PurchaseInteraction_OnInteractionEnd;
             On.RoR2.PurchaseInteraction.ScaleCost += PurchaseInteraction_ScaleCost;
             On.RoR2.PurchaseInteraction.SetAvailable += PurchaseInteraction_SetAvailable;
             On.RoR2.ShopTerminalBehavior.DropPickup += ShopTerminalBehavior_DropPickup;
@@ -114,9 +114,18 @@ namespace BazaarIsMyHaven
                 {
                     var playerCharacterMasterController = activator.GetComponent<CharacterBody>().master.playerCharacterMasterController;
                     var playerStruct = Main.instance.GetPlayerStruct(playerCharacterMasterController);
+                    // this is a special check which is required because characters can swap an equip in here
+                    if (!whichStallsHaveBeenBoughtOnce.TryGetValue(self, out List<PlayerCharacterMasterController> buyers) || !buyers.Contains(playerCharacterMasterController))
+                    {
+                        playerStruct.LunarShopUseCount++;
+                        if (ModConfig.LunarShopBuyLimit.Value >= 0)
+                        {
+                            ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, (ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount));
+                        }
+                        whichStallsHaveBeenBoughtOnce[self].Add(playerCharacterMasterController);
+                    }
 
                     var usesLeft = ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount;
-
                     if (usesLeft <= 0 && ModConfig.LunarShopBuyLimit.Value >= 0) {
                         ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, usesLeft);
                         return;
@@ -131,30 +140,7 @@ namespace BazaarIsMyHaven
                         currentActivator = null;
                     }
                 }
-            }
-            orig(self, activator);
-        }
 
-        private void PurchaseInteraction_OnInteractionEnd(On.RoR2.PurchaseInteraction.orig_OnInteractionBegin orig, PurchaseInteraction self, Interactor activator)
-        {
-            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active)
-            {
-                var playerCharacterMasterController = activator.GetComponent<CharacterBody>().master.playerCharacterMasterController;
-                var playerStruct = Main.instance.GetPlayerStruct(playerCharacterMasterController);
-                if (self.name.StartsWith("LunarShopTerminal"))
-                {
-                    // this is a special check which is required because characters can swap an equip in here
-                    if (!whichStallsHaveBeenBoughtOnce.TryGetValue(self, out List<PlayerCharacterMasterController> buyers) || !buyers.Contains(playerCharacterMasterController))
-                    {
-                        playerStruct.LunarShopUseCount++;
-                        if (ModConfig.LunarShopBuyLimit.Value >= 0)
-                        {
-                            var usesLeft = ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount;
-                            ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, usesLeft);
-                        }
-                        whichStallsHaveBeenBoughtOnce[self].Add(playerCharacterMasterController);
-                    }
-                }
                 if (self.name.StartsWith("LunarRecycler"))
                 {
                     if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
@@ -167,15 +153,14 @@ namespace BazaarIsMyHaven
                             time += 0.1f;
                         }
                     }
-                }
-            }
-            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerRerollLimit.Value >= 0 && IsCurrentMapInBazaar() && NetworkServer.active)
-            {
-                if (self.name.StartsWith("LunarRecycler"))
-                {
-                    lunarRecyclerRerolledCount++;
-                    var usesLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
-                    ChatHelper.LunarRecyclerUsesLeft(usesLeft);
+
+                    if (ModConfig.LunarRecyclerRerollLimit.Value >= 0)
+                    {
+                        lunarRecyclerRerolledCount++;
+                        var usesLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
+                        ChatHelper.LunarRecyclerUsesLeft(usesLeft);
+                    }
+
                 }
             }
 

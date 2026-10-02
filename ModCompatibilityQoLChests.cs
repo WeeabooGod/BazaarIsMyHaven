@@ -22,7 +22,7 @@ namespace BazaarIsMyHaven
             {
                 if (_enabled == null)
                 {
-                    _enabled = Chainloader.PluginInfos.ContainsKey("com.Faust.QoLChest");
+                    _enabled = Chainloader.PluginInfos.ContainsKey("Faust.QoLChests");
                 }
                 return (bool)_enabled;
             }
@@ -56,7 +56,7 @@ namespace BazaarIsMyHaven
 
                 if (blacklistMethod == null)
                 {
-                    Log.LogWarning("Could not find the QoLChests blacklist API.");
+                    Log.LogWarning("Bruddah did you fuck up the GetType for Faust Blacklists?");
                     return;
                 }
 
@@ -65,7 +65,7 @@ namespace BazaarIsMyHaven
             }
             catch (Exception exception)
             {
-                Log.LogWarning($"Could not register the QoLChests exemption: {exception}");
+                Log.LogWarning($"It did done fucked up yo QoLChests exemption: {exception}");
             }
         }
     }
