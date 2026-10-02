@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using BepInEx.Bootstrap;
 using RoR2;
 using System;
 using System.Collections;
@@ -15,6 +16,10 @@ namespace BazaarIsMyHaven
 {
     public class BazaarLunarShop : BazaarBase
     {
+        //Give the Shop a name, useful for QoLChest's blacklisting feature, to prevent the shops from dissapearing
+        //and interfering with rerolling and other features.
+        private const string LunarShopObjectName = "LunarShopTerminal_WeebsCustom";
+
         AsyncOperationHandle<GameObject> lunarShopBud;
         AsyncOperationHandle<GameObject> lunarShopTerminal;
         AsyncOperationHandle<GameObject> LunarRerollEffect;
@@ -80,6 +85,7 @@ namespace BazaarIsMyHaven
                     {
                         self.cost = ModConfig.LunarShopCost.Value;
                         self.Networkcost = ModConfig.LunarShopCost.Value;
+                        self.costType = CostTypeIndex.LunarCoin;
                     }
                 }
                 if (ModConfig.LunarShopSectionEnabled.Value)
@@ -129,51 +135,51 @@ namespace BazaarIsMyHaven
             orig(self, activator);
         }
 
-        private void PurchaseInteraction_OnInteractionEnd(MonoMod.Cil.ILContext il)
+        private void PurchaseInteraction_OnInteractionEnd(On.RoR2.PurchaseInteraction.orig_OnInteractionBegin orig, PurchaseInteraction self, Interactor activator)
         {
-            HookHelper.HookEndOfMethod(il, (PurchaseInteraction self, Interactor activator) =>
+            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
-                if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active)
+                var playerCharacterMasterController = activator.GetComponent<CharacterBody>().master.playerCharacterMasterController;
+                var playerStruct = Main.instance.GetPlayerStruct(playerCharacterMasterController);
+                if (self.name.StartsWith("LunarShopTerminal"))
                 {
-                    var playerCharacterMasterController = activator.GetComponent<CharacterBody>().master.playerCharacterMasterController;
-                    var playerStruct = Main.instance.GetPlayerStruct(playerCharacterMasterController);
-                    if (self.name.StartsWith("LunarShopTerminal"))
+                    // this is a special check which is required because characters can swap an equip in here
+                    if (!whichStallsHaveBeenBoughtOnce.TryGetValue(self, out List<PlayerCharacterMasterController> buyers) || !buyers.Contains(playerCharacterMasterController))
                     {
-                        // this is a special check which is required because characters can swap an equip in here
-                        if (!whichStallsHaveBeenBoughtOnce.TryGetValue(self, out List<PlayerCharacterMasterController> buyers) || !buyers.Contains(playerCharacterMasterController))
+                        playerStruct.LunarShopUseCount++;
+                        if (ModConfig.LunarShopBuyLimit.Value >= 0)
                         {
-                            playerStruct.LunarShopUseCount++;
-                            if (ModConfig.LunarShopBuyLimit.Value >= 0) {
-                                var usesLeft = ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount;
-                                ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, usesLeft);
-                            }
-                            whichStallsHaveBeenBoughtOnce[self].Add(playerCharacterMasterController);
+                            var usesLeft = ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount;
+                            ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, usesLeft);
                         }
+                        whichStallsHaveBeenBoughtOnce[self].Add(playerCharacterMasterController);
                     }
-                    if (self.name.StartsWith("LunarRecycler"))
+                }
+                if (self.name.StartsWith("LunarRecycler"))
+                {
+                    if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
                     {
-                        if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
+                        float time = 0f;
+                        foreach (GameObject lunarShopTerminal in ObjectLunarShopTerminals_Spawn)
                         {
-                            float time = 0f;
-                            foreach (GameObject lunarShopTerminal in ObjectLunarShopTerminals_Spawn)
-                            {
-                                Main.instance.StartCoroutine(DelayRerollEffect(lunarShopTerminal, time, currentLunarShopStaticItemIndex));
-                                currentLunarShopStaticItemIndex += 1;
-                                time += 0.1f;
-                            }
+                            Main.instance.StartCoroutine(DelayRerollEffect(lunarShopTerminal, time, currentLunarShopStaticItemIndex));
+                            currentLunarShopStaticItemIndex += 1;
+                            time += 0.1f;
                         }
                     }
                 }
-                if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerRerollLimit.Value >= 0 && IsCurrentMapInBazaar() && NetworkServer.active)
+            }
+            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerRerollLimit.Value >= 0 && IsCurrentMapInBazaar() && NetworkServer.active)
+            {
+                if (self.name.StartsWith("LunarRecycler"))
                 {
-                    if(self.name.StartsWith("LunarRecycler"))
-                    {
-                        lunarRecyclerRerolledCount++;
-                        var usesLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
-                        ChatHelper.LunarRecyclerUsesLeft(usesLeft);
-                    }
+                    lunarRecyclerRerolledCount++;
+                    var usesLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
+                    ChatHelper.LunarRecyclerUsesLeft(usesLeft);
                 }
-            });
+            }
+
+            orig(self, activator);
         }
 
         private void PurchaseInteraction_ScaleCost(On.RoR2.PurchaseInteraction.orig_ScaleCost orig, PurchaseInteraction self, float scalar)
@@ -470,6 +476,15 @@ namespace BazaarIsMyHaven
 
         private void SpawnLunarShopTerminal()
         {
+            //Soft compatibility with QolChest to prevent the removal of the terminals.
+            //I did it this way because the original intention was to clear clutter from the combat area.
+            //The Bazaar is time-stopped safe area with things in their proper places.
+            if (ModCompatibilityQoLChests.enabled)
+            {
+                ModCompatibilityQoLChests.RegisterQoLChestsBlacklist(LunarShopObjectName);
+                //Todo: Check for other mods that clear chests, make it universal rule without having to resort to modcompatbility
+            }
+
             ObjectLunarShopTerminals_Spawn.Clear();
             currentLunarShopStaticItemIndex = 0;
             DicLunarShopTerminals.Clear();
@@ -505,7 +520,7 @@ namespace BazaarIsMyHaven
             for (int i = 0; i < gameObjects.Count; i++)
             {
                 GameObject gameObject = gameObjects[i];
-                gameObject.name = "LunarShopTerminal";
+                gameObject.name = LunarShopObjectName;
                 var purchaseInteraction = gameObject.GetComponent<PurchaseInteraction>();
                 var shopTerminalBehavior = gameObject.GetComponent<ShopTerminalBehavior>();
                 if (ModConfig.LunarShopInstancedPurchases.Value)
