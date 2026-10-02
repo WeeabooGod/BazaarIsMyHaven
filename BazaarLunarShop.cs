@@ -2,6 +2,7 @@
 using BepInEx.Bootstrap;
 using RoR2;
 using System;
+using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.UIElements;
+using UnityEngine.Events;
 
 namespace BazaarIsMyHaven
 {
@@ -574,6 +576,35 @@ namespace BazaarIsMyHaven
             }
         }
 
+        //Helper function that aims to disable the defualt "SetNoPickup()" behavior in lunar buds so they can "swap" equipment only when the lunar shop section is enabled
+        private void DisableLunarBudPickupClearing(PurchaseInteraction purchaseInteraction, ShopTerminalBehavior shopTerminalBehavior)
+        {
+            var purchaseEventField = typeof(PurchaseInteraction).GetField("onPurchase", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+            if (purchaseEventField == null)
+            {
+                Log.LogWarning("Could Not Find the Lunar Buds purchase Event");
+                return;
+            }
+
+            var purchaseEvent = (UnityEventBase)purchaseEventField.GetValue(purchaseInteraction);
+
+            if (purchaseEvent == null)
+            {
+                Log.LogWarning("The Lunar Bud's Purchase Event is Missing");
+                return;
+            }
+
+            for (int index = 0; index < purchaseEvent.GetPersistentEventCount(); index++)
+            {
+                if (purchaseEvent.GetPersistentTarget(index) == shopTerminalBehavior && purchaseEvent.GetPersistentMethodName(index) == nameof(shopTerminalBehavior.SetNoPickup))
+                {
+                    //Turn off built in NoPickup, our DropPickup hook already does this
+                    purchaseEvent.SetPersistentListenerState(index, UnityEventCallState.Off);
+                }
+            }
+        }
+
         private void SpawnLunarShopTerminal()
         {
             //Soft compatibility with QolChest to prevent the removal of the terminals.
@@ -621,6 +652,13 @@ namespace BazaarIsMyHaven
                 gameObject.name = LunarShopObjectName;
                 var purchaseInteraction = gameObject.GetComponent<PurchaseInteraction>();
                 var shopTerminalBehavior = gameObject.GetComponent<ShopTerminalBehavior>();
+
+                //Clear Lunar Buds of their defualt SetNoPickup Behavior
+                if (!ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
+                {
+                    DisableLunarBudPickupClearing(purchaseInteraction, shopTerminalBehavior);
+                }
+
                 if (ModConfig.LunarShopInstancedPurchases.Value)
                 {
                     var instancedPurchase = gameObject.AddComponent<InstancedPurchase>();

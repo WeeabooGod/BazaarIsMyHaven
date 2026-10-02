@@ -176,7 +176,7 @@ namespace BazaarIsMyHaven
 
             // 06 LunarShop
             LunarShopSectionEnabled = config.Bind("06 LunarShop", "SectionEnabled", true, "Enables or disables the Lunar Shop section.");
-            LunarShopReplaceLunarBudsWithTerminals = config.Bind("06 LunarShop", "ReplaceLunarBudsWithTerminals", true, "Required so that Amount works. Otherwise it will always be 5 Lunar Buds. Looks also better in combination with InstancedPurchases.");
+            LunarShopReplaceLunarBudsWithTerminals = config.Bind("06 LunarShop", "ReplaceLunarBudsWithTerminals", true, "If enabled, replaces lunar buds with shop terminals. At this point mostly cosmetic, but it looks good with equipment swapping");
             LunarShopAmount = config.Bind("06 LunarShop", "Amount", 5, new ConfigDescription("Number of Lunar Shop Terminals (max 20).", new AcceptableValueRange<int>(0, 20)));
             LunarShopCost = config.Bind("06 LunarShop", "Cost", 1, "Lunar coin cost per Lunar Shop Terminal or Lunar Bud use.");
             LunarShopBuyLimit = config.Bind("06 LunarShop", "BuyLimit", 5, "Limit on Lunar Shop purchases each player can make per visit to the Bazaar. -1 = Unlimited.");
