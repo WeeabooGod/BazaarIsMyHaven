@@ -107,6 +107,6 @@ namespace BazaarIsMyHaven
         public bool hasBeenPurchasedOnce = false;
 
         // Consumed shops and terminals disabled for a character must stay unavailable.
-        public bool CanReroll => available && !hasBeenPurchased && !pickup.Equals(UniquePickup.none);
+        public bool CanReroll => available && !hasBeenPurchased && !hasBeenPurchasedOnce && !pickup.Equals(UniquePickup.none);
     }
 }
