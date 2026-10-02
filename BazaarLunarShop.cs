@@ -432,6 +432,12 @@ namespace BazaarIsMyHaven
             }
             else //Non-instanced shops 
             {
+                //Preserve remaining equipment if a purchase has been made and swapped
+                if (whichStallsHaveBeenBoughtOnce.TryGetValue(purchase, out var buyers) && buyers.Count > 0)
+                {
+                    yield break;
+                }
+
                 if (!purchase.available || terminal.hasBeenPurchased || terminal.pickup.Equals(UniquePickup.none) || !TryGenerateLunarShopPickup(out var pickup))
                 {
                     yield break;
