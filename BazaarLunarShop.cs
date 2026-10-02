@@ -298,7 +298,7 @@ namespace BazaarIsMyHaven
             return points;
         }
 
-        private void SetLunarShopTerminal()
+        private void SetLunarShopTerminal(bool isLunarBuds = true)
         {
             Vector3 lunarTablePosition = new Vector3(-76.6438f, -24.0468f, -41.6449f);
             float orientation = 280f;
@@ -381,6 +381,7 @@ namespace BazaarIsMyHaven
                 //List<Vector2> centroids = Lloyd.Centroids(samples, count);
                 //points = Lloyd.MapSamplesOrderToCentroids(samples, centroids);
             }
+
             for (int i = 0; i < points.Count; i++) {
                 Quaternion rotation = Quaternion.LookRotation(new Vector3(-points[i].x, 0, -points[i].y));
                 if (count > middleCapacity && points[i].magnitude < tableRadiusMiddle)
@@ -388,9 +389,22 @@ namespace BazaarIsMyHaven
                     // we are on the inner row
                     rotation = Quaternion.LookRotation(new Vector3(points[i].x, 0, points[i].y));
                 }
+
+                //Shop Terminals are oriented in a specific way, causing buds to be upside down
                 Quaternion rotationUpsideDown = Quaternion.Euler(180, 0, 0);
+                if (isLunarBuds)
+                {
+                    rotationUpsideDown = Quaternion.Euler(0, 180, 0); //Also, Y axis needs to be flipped so the price hologram is oriented outwards
+                }
                 rotation = rotation * rotationUpsideDown;
+
+                //Shop Terminals require a height offset, but buds do not
                 var position = new Vector3(lunarTablePosition.x + points[i].x, lunarTablePosition.y + 4.0f , lunarTablePosition.z + points[i].y);
+                if (isLunarBuds)
+                {
+                    position = new Vector3(lunarTablePosition.x + points[i].x, lunarTablePosition.y, lunarTablePosition.z + points[i].y);
+                }
+
                 DicLunarShopTerminals.Add(i, new SpawnCardStruct(position, rotation.eulerAngles));
             }
         }
@@ -400,7 +414,7 @@ namespace BazaarIsMyHaven
             ObjectLunarShopTerminals_Spawn.Clear();
             currentLunarShopStaticItemIndex = 0;
             DicLunarShopTerminals.Clear();
-            SetLunarShopTerminal();
+            SetLunarShopTerminal(!ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value); //To take care of Lunar Buds and Terminal Distinction
 
             // find original lunar buds
             var gameObjects = new List<GameObject>();
