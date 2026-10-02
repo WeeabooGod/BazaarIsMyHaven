@@ -143,15 +143,12 @@ namespace BazaarIsMyHaven
 
                 if (self.name.StartsWith("LunarRecycler"))
                 {
-                    if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
+                    float time = 0f;
+                    foreach (GameObject lunarShopTerminal in ObjectLunarShopTerminals_Spawn)
                     {
-                        float time = 0f;
-                        foreach (GameObject lunarShopTerminal in ObjectLunarShopTerminals_Spawn)
-                        {
-                            Main.instance.StartCoroutine(DelayRerollEffect(lunarShopTerminal, time, currentLunarShopStaticItemIndex));
-                            currentLunarShopStaticItemIndex += 1;
-                            time += 0.1f;
-                        }
+                        Main.instance.StartCoroutine(DelayRerollEffect(lunarShopTerminal, time, currentLunarShopStaticItemIndex));
+                        currentLunarShopStaticItemIndex += 1;
+                        time += 0.1f;
                     }
 
                     if (ModConfig.LunarRecyclerRerollLimit.Value >= 0)
@@ -237,10 +234,12 @@ namespace BazaarIsMyHaven
         private void SendPurchasedFlagToClients(ShopTerminalBehavior shop)
         {
             // Broadcasting one player's purchased flag would break instanced purchases.
-            if (!NetworkServer.active || ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value || shop.GetComponent<InstancedPurchase>() || !shop.hasBeenPurchased)
+            if (ModConfig.LunarShopInstancedPurchases.Value)
             {
+                Log.LogWarning("Instance is On!!!!!!!!");
                 return;
             }
+            Log.LogWarning("Instance is Off!!!!!!!!, sending purchased flag to clients");
 
             var identity = shop.GetComponent<NetworkIdentity>();
             if (!identity || identity.observers == null)
@@ -323,9 +322,22 @@ namespace BazaarIsMyHaven
         {
             yield return new WaitForSeconds(time);
 
-            generateNewPickupIndex = itemIndex;
-            lunarShopTerminal.GetComponent<ShopTerminalBehavior>().GenerateNewPickupServer();
-            SpawnEffect(LunarRerollEffect, lunarShopTerminal.transform.position - Vector3.up * 2.5f, new Color32(255, 255, 255, 255), 2f);
+            //Only Reroll what has not been purchased - causes problems otherwise
+            if (!lunarShopTerminal.GetComponent<ShopTerminalBehavior>().hasBeenPurchased)
+            {
+                generateNewPickupIndex = itemIndex;
+                lunarShopTerminal.GetComponent<ShopTerminalBehavior>().GenerateNewPickupServer();
+
+                //Lunar Terminals need a position offset so the effect matches where the actual display item is, Buds are opposite
+                if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
+                {
+                    SpawnEffect(LunarRerollEffect, lunarShopTerminal.transform.position - Vector3.up * 2.5f, new Color32(255, 255, 255, 255), 2f);
+                }
+                else
+                {
+                    SpawnEffect(LunarRerollEffect, lunarShopTerminal.transform.position + Vector3.up * 2.5f, new Color32(255, 255, 255, 255), 2f);
+                }
+            }
         }
 
         public static List<Vector2> GenerateCirclePoints(float radius, float startAngle, float endAngle, float orientation, int numberOfPoints)
