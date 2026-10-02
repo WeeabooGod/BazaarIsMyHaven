@@ -203,6 +203,7 @@ namespace BazaarIsMyHaven
             }
             orig(self, newAvailable);
         }
+
         private void ShopTerminalBehavior_DropPickup(On.RoR2.ShopTerminalBehavior.orig_DropPickup orig, ShopTerminalBehavior self)
         {
             if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active && self.name.StartsWith("LunarShopTerminal"))
@@ -222,6 +223,7 @@ namespace BazaarIsMyHaven
                         else
                         {
                             self.SetHasBeenPurchased(newHasBeenPurchased: true);
+                            SendPurchasedFlagToClients(self);
                             self.SetNoPickup();
                         }
                     }
@@ -229,12 +231,69 @@ namespace BazaarIsMyHaven
                 else
                 {
                     orig(self);
+                    SendPurchasedFlagToClients(self);
                     self.SetNoPickup();
                 }
             }
             else
             {
                 orig(self);
+            }
+        }
+
+        //Workaround for client lunar shop "BUDS" for not having an opening animation upon purchase
+        //Only useful for non-instanced shops
+        private void SendPurchasedFlagToClients(ShopTerminalBehavior shop)
+        {
+            // Broadcasting one player's purchased flag would break instanced purchases.
+            if (!NetworkServer.active || ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value || shop.GetComponent<InstancedPurchase>() || !shop.hasBeenPurchased)
+            {
+                return;
+            }
+
+            var identity = shop.GetComponent<NetworkIdentity>();
+            if (!identity || identity.observers == null)
+            {
+                return;
+            }
+
+            int channel = shop.GetNetworkChannel();
+            var writer = new NetworkWriter();
+
+            writer.StartMessage(MsgType.UpdateVars);
+            writer.Write(identity.netId);
+
+            // Preserve the component order expected by the client's network reader.
+            foreach (var behaviour in identity.GetBehavioursOfSameChannel(channel, false))
+            {
+                uint originalDirtyBits = behaviour.m_SyncVarDirtyBits;
+
+                try
+                {
+                    // 4 is ShopTerminalBehavior's hasBeenPurchased field.
+                    // Exclude its pickup field so this message cannot trigger the
+                    // animation before the client has received the purchased flag.
+                    behaviour.m_SyncVarDirtyBits = behaviour == shop ? 4u : 0u;
+                    behaviour.OnSerialize(writer, false);
+                }
+                finally
+                {
+                    // Leave all pending changes available for the normal update.
+                    behaviour.m_SyncVarDirtyBits = originalDirtyBits;
+                }
+            }
+
+            writer.FinishMessage();
+
+            foreach (var connection in identity.observers)
+            {
+                if (connection.isReady && !Util.ConnectionIsLocal(connection))
+                {
+                    if (!connection.SendWriter(writer, channel))
+                    {
+                        Log.LogWarning("Could not send the lunar bud purchased flag.");
+                    }
+                }
             }
         }
 
