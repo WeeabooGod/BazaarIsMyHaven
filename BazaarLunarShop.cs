@@ -25,7 +25,6 @@ namespace BazaarIsMyHaven
         AsyncOperationHandle<GameObject> LunarRerollEffect;
 
         Dictionary<int, SpawnCardStruct> DicLunarShopTerminals = new Dictionary<int, SpawnCardStruct>();
-        int currentLunarShopStaticItemIndex = 0;
         int generateNewPickupIndex = 0;
         int lunarRecyclerRerolledCount = 0;
         List<GameObject> ObjectLunarShopTerminals_Spawn = new List<GameObject>();
@@ -68,7 +67,7 @@ namespace BazaarIsMyHaven
                 lunarRecyclerRerolledCount = 0;
             }
             if (ModConfig.LunarShopSectionEnabled.Value) {
-                currentLunarShopStaticItemIndex = 0;
+                generateNewPickupIndex = 0;
                 whichStallsHaveBeenBoughtOnce.Clear();
                 SpawnLunarShopTerminal();
             }
@@ -106,58 +105,119 @@ namespace BazaarIsMyHaven
             }
         }
 
+        private bool TryCompletePurchase(On.RoR2.PurchaseInteraction.orig_OnInteractionBegin orig, PurchaseInteraction self, Interactor activator, PlayerCharacterMasterController player)
+        {
+            // onDetailedPurchaseServer runs after the game accepts and pays for the purchase.
+            // Merely entering OnInteractionBegin does not prove that a purchase succeeded.
+            bool purchaseSucceeded = false;
+            UnityEngine.Events.UnityAction<CostTypeDef.PayCostContext, CostTypeDef.PayCostResults> purchaseListener =
+                (context, results) =>
+                {
+                    if (context.activator == activator)
+                    {
+                        purchaseSucceeded = true;
+                    }
+                };
+
+            // Keep the buyer available to DropPickup while the game's purchase code runs.
+            var previousActivator = currentActivator;
+            self.onDetailedPurchaseServer.AddListener(purchaseListener);
+            try
+            {
+                currentActivator = player;
+                orig(self, activator);
+            }
+            finally
+            {
+                currentActivator = previousActivator;
+                self.onDetailedPurchaseServer.RemoveListener(purchaseListener);
+            }
+
+            return purchaseSucceeded;
+        }
+
         public void PurchaseInteraction_OnInteractionBegin(On.RoR2.PurchaseInteraction.orig_OnInteractionBegin orig, PurchaseInteraction self, Interactor activator)
         {
             if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
-                if(self.name.StartsWith("LunarShopTerminal"))
+                var body = activator ? activator.GetComponent<CharacterBody>() : null;
+                var player = body && body.master ? body.master.playerCharacterMasterController : null;
+                if (!player)
                 {
-                    var playerCharacterMasterController = activator.GetComponent<CharacterBody>().master.playerCharacterMasterController;
-                    var playerStruct = Main.instance.GetPlayerStruct(playerCharacterMasterController);
-                    // this is a special check which is required because characters can swap an equip in here
-                    if (!whichStallsHaveBeenBoughtOnce.TryGetValue(self, out List<PlayerCharacterMasterController> buyers) || !buyers.Contains(playerCharacterMasterController))
+                    orig(self, activator);
+                    return;
+                }
+
+                // Shops/Terminals are already in the dictionary before anyone purchases them. Each sart with an empty buyer list
+                // TryGetValue identifies tracked shops buyers.contains(player) determins whether that player bought it.
+                if (whichStallsHaveBeenBoughtOnce.TryGetValue(self, out var buyers))
+                {
+                    var playerState = Main.instance.GetPlayerStruct(player);
+                    bool firstPurchase = !buyers.Contains(player);
+                    int usesLeft = ModConfig.LunarShopBuyLimit.Value - playerState.LunarShopUseCount;
+
+                    if (firstPurchase && ModConfig.LunarShopBuyLimit.Value >= 0 && usesLeft <= 0)
                     {
-                        playerStruct.LunarShopUseCount++;
-                        if (ModConfig.LunarShopBuyLimit.Value >= 0)
-                        {
-                            ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, (ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount));
-                        }
-                        whichStallsHaveBeenBoughtOnce[self].Add(playerCharacterMasterController);
+                        ChatHelper.LunarShopTerminalUsesLeft(player, usesLeft);
+                        return;
                     }
 
-                    var usesLeft = ModConfig.LunarShopBuyLimit.Value - playerStruct.LunarShopUseCount;
-                    if (usesLeft <= 0 && ModConfig.LunarShopBuyLimit.Value >= 0) {
-                        ChatHelper.LunarShopTerminalUsesLeft(playerCharacterMasterController, usesLeft);
-                        return;
-                    }
-                    try { 
-                        currentActivator = playerCharacterMasterController;
-                        orig(self, activator);
-                        return;
-                    }
-                    finally
+                    if (!TryCompletePurchase(orig, self, activator, player))
                     {
-                        currentActivator = null;
+                        return;
                     }
+
+                    // Swapping equipment at a previously purchased slot does not use another purchase.
+                    if (firstPurchase)
+                    {
+                        buyers.Add(player);
+                        playerState.LunarShopUseCount++;
+                        if (self.TryGetComponent(out InstancedPurchase instance))
+                        {
+                            instance.GetOrCreate(player).hasBeenPurchasedOnce = true;
+                        }
+
+                        if (ModConfig.LunarShopBuyLimit.Value >= 0)
+                        {
+                            ChatHelper.LunarShopTerminalUsesLeft(
+                                player, ModConfig.LunarShopBuyLimit.Value - playerState.LunarShopUseCount);
+                        }
+                    }
+
+                    return;
                 }
 
                 if (self.name.StartsWith("LunarRecycler"))
                 {
-                    float time = 0f;
-                    foreach (GameObject lunarShopTerminal in ObjectLunarShopTerminals_Spawn)
+                    if (!self.available || (ModConfig.LunarRecyclerRerollLimit.Value >= 0 && lunarRecyclerRerolledCount >= ModConfig.LunarRecyclerRerollLimit.Value))
                     {
-                        Main.instance.StartCoroutine(DelayRerollEffect(lunarShopTerminal, time, currentLunarShopStaticItemIndex));
-                        currentLunarShopStaticItemIndex += 1;
-                        time += 0.1f;
+                        return;
                     }
 
+                    if (!TryCompletePurchase(orig, self, activator, player))
+                    {
+                        return;
+                    }
+
+                    lunarRecyclerRerolledCount++;
                     if (ModConfig.LunarRecyclerRerollLimit.Value >= 0)
                     {
-                        lunarRecyclerRerolledCount++;
-                        var usesLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
-                        ChatHelper.LunarRecyclerUsesLeft(usesLeft);
+                        int rerollsLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
+                        ChatHelper.LunarRecyclerUsesLeft(rerollsLeft);
+                        if (rerollsLeft <= 0)
+                        {
+                            self.SetAvailable(false);
+                        }
                     }
 
+                    float delay = 0f;
+                    foreach (var shop in ObjectLunarShopTerminals_Spawn)
+                    {
+                        Main.instance.StartCoroutine(DelayRerollEffect(shop, delay));
+                        delay += 0.1f;
+                    }
+
+                    return;
                 }
             }
 
@@ -181,11 +241,10 @@ namespace BazaarIsMyHaven
             {
                 if (self.name.StartsWith("LunarRecycler"))
                 {
-                    if(ModConfig.LunarRecyclerRerollLimit.Value >= 0) { 
-                        newAvailable = lunarRecyclerRerolledCount < ModConfig.LunarRecyclerRerollLimit.Value;
-                    } else
+                    if(ModConfig.LunarRecyclerRerollLimit.Value >= 0) 
                     {
-                        newAvailable = true;
+                        //Preserve game's cooldown, only veto a request to become available
+                        newAvailable = newAvailable && lunarRecyclerRerolledCount < ModConfig.LunarRecyclerRerollLimit.Value;
                     }
                 }
             }
@@ -233,13 +292,10 @@ namespace BazaarIsMyHaven
         //Only useful for non-instanced shops
         private void SendPurchasedFlagToClients(ShopTerminalBehavior shop)
         {
-            // Broadcasting one player's purchased flag would break instanced purchases.
-            if (ModConfig.LunarShopInstancedPurchases.Value)
+            if (!NetworkServer.active || shop.GetComponent<InstancedPurchase>() || !shop.hasBeenPurchased)
             {
-                Log.LogWarning("Instance is On!!!!!!!!");
                 return;
             }
-            Log.LogWarning("Instance is Off!!!!!!!!, sending purchased flag to clients");
 
             var identity = shop.GetComponent<NetworkIdentity>();
             if (!identity || identity.observers == null)
@@ -287,57 +343,104 @@ namespace BazaarIsMyHaven
             }
         }
 
+        //Reusable function as its used in multiple places.
+        private bool TryGenerateLunarShopPickup(out UniquePickup pickup)
+        {
+            int itemIndex = ModConfig.LunarShopSequentialItems.Value ? generateNewPickupIndex : -1;
+
+            var resolvedItems = new Dictionary<PickupIndex, int>();
+            ItemStringParser.ItemStringParser.ParseItemString(ModConfig.LunarShopItemList.Value, resolvedItems, Log.GetSource(), false, itemIndex);
+
+            foreach (var entry in resolvedItems)
+            {
+                if (entry.Value > 0)
+                {
+                    pickup = new UniquePickup(entry.Key);
+                    generateNewPickupIndex++;
+                    return true;
+                }
+            }
+
+            pickup = UniquePickup.none;
+            Log.LogError($"Could not generate a lunar shop pickup from: {ModConfig.LunarShopItemList.Value}");
+            return false;
+        }
+
+
         private void ShopTerminalBehavior_GenerateNewPickupServer_bool(On.RoR2.ShopTerminalBehavior.orig_GenerateNewPickupServer_bool orig, ShopTerminalBehavior self, bool newHidden)
         {
             if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active && self.name.StartsWith("LunarShopTerminal"))
             {
-                if (!ModConfig.LunarShopSequentialItems.Value)
-                    generateNewPickupIndex = -1;
+                if (TryGenerateLunarShopPickup(out var pickup))
+                {
+                    self.SetPickup(pickup, newHidden);
+                }
+                return;
+            }
 
-                Dictionary<PickupIndex, int> resolvedItems = new Dictionary<PickupIndex, int>();
-                ItemStringParser.ItemStringParser.ParseItemString(ModConfig.LunarShopItemList.Value, resolvedItems, Log.GetSource(), false, generateNewPickupIndex);
-                bool set = false;
-                foreach (var (pickupIndex, amount) in resolvedItems)
-                {
-                    if (amount > 0)
-                    {
-                        self.SetPickup(new UniquePickup(pickupIndex), newHidden);
-                        set = true;
-                        generateNewPickupIndex += 1;
-                        break;
-                    }
-                }
-                if (!set)
-                {
-                    Log.LogError($"Could not get a proper pickup index from EquipmentReplaceWithEliteList: {ModConfig.EquipmentReplaceWithEliteList.Value}");
-                }
-            }
-            else
-            {
-                orig(self, newHidden);
-            }
+            orig(self, newHidden);
         }
 
-        IEnumerator DelayRerollEffect(GameObject lunarShopTerminal, float time, int itemIndex)
+        private IEnumerator DelayRerollEffect(GameObject shop, float delay)
         {
-            yield return new WaitForSeconds(time);
+            yield return new WaitForSeconds(delay);
 
-            //Only Reroll what has not been purchased - causes problems otherwise
-            if (!lunarShopTerminal.GetComponent<ShopTerminalBehavior>().hasBeenPurchased)
+            //Sanity Checks
+            if (!NetworkServer.active || !shop)
             {
-                generateNewPickupIndex = itemIndex;
-                lunarShopTerminal.GetComponent<ShopTerminalBehavior>().GenerateNewPickupServer();
-
-                //Lunar Terminals need a position offset so the effect matches where the actual display item is, Buds are opposite
-                if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
-                {
-                    SpawnEffect(LunarRerollEffect, lunarShopTerminal.transform.position - Vector3.up * 2.5f, new Color32(255, 255, 255, 255), 2f);
-                }
-                else
-                {
-                    SpawnEffect(LunarRerollEffect, lunarShopTerminal.transform.position + Vector3.up * 2.5f, new Color32(255, 255, 255, 255), 2f);
-                }
+                yield break;
             }
+
+            //Sanity checks again woooo
+            var terminal = shop.GetComponent<ShopTerminalBehavior>();
+            var purchase = shop.GetComponent<PurchaseInteraction>();
+            if (!terminal || !purchase)
+            {
+                yield break;
+            }
+
+            if (shop.TryGetComponent(out InstancedPurchase instance))
+            {
+                // Evaluate after the delay - a player may have purchased this slot meanwhile.
+                bool anyEligiblePlayer = PlayerCharacterMasterController.instances.Any(pc => pc && instance.GetOrOriginal(pc).CanReroll);
+                if (!anyEligiblePlayer || !TryGenerateLunarShopPickup(out var pickup))
+                {
+                    yield break;
+                }
+
+                // Roll once per slot. Players who have not used it receive the same new offer.
+                // The default also supplies players without a personal record yet.
+                if (instance.original.CanReroll)
+                {
+                    instance.original.pickup = pickup;
+                    instance.original.hidden = false;
+                }
+
+                foreach (var state in instance.purchases.Values)
+                {
+                    if (state.CanReroll)
+                    {
+                        state.pickup = pickup;
+                        state.hidden = false;
+                    }
+                }
+
+                // This sends each client their own state, including consumed/disabled slots.
+                InstancedPurchases.UpdateAll(shop);
+            }
+            else //Non-instanced shops 
+            {
+                if (!purchase.available || terminal.hasBeenPurchased || terminal.pickup.Equals(UniquePickup.none) || !TryGenerateLunarShopPickup(out var pickup))
+                {
+                    yield break;
+                }
+
+                terminal.SetPickup(pickup, false);
+            }
+
+            //Account for Bud and Terminal Differences
+            float height = ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value ? -2.5f : 2.5f;
+            SpawnEffect(LunarRerollEffect, shop.transform.position + Vector3.up * height, new Color32(255, 255, 255, 255), 2f);
         }
 
         public static List<Vector2> GenerateCirclePoints(float radius, float startAngle, float endAngle, float orientation, int numberOfPoints)
@@ -474,8 +577,6 @@ namespace BazaarIsMyHaven
         private void SpawnLunarShopTerminal()
         {
             //Soft compatibility with QolChest to prevent the removal of the terminals.
-            //I did it this way because the original intention was to clear clutter from the combat area.
-            //The Bazaar is time-stopped safe area with things in their proper places.
             if (ModCompatibilityQoLChests.enabled)
             {
                 ModCompatibilityQoLChests.RegisterQoLChestsBlacklist(LunarShopObjectName);
@@ -483,7 +584,7 @@ namespace BazaarIsMyHaven
             }
 
             ObjectLunarShopTerminals_Spawn.Clear();
-            currentLunarShopStaticItemIndex = 0;
+            generateNewPickupIndex = 0;
             DicLunarShopTerminals.Clear();
             SetLunarShopTerminal(!ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value); //To take care of Lunar Buds and Terminal Distinction
 
@@ -526,6 +627,7 @@ namespace BazaarIsMyHaven
                     instancedPurchase.original.available = purchaseInteraction.available;
                     instancedPurchase.original.pickup = shopTerminalBehavior.pickup;
                     instancedPurchase.original.hasBeenPurchased = shopTerminalBehavior.hasBeenPurchased;
+                    instancedPurchase.original.hidden = shopTerminalBehavior.hidden;
 
                     foreach (var pc in PlayerCharacterMasterController.instances)
                     {
@@ -543,6 +645,7 @@ namespace BazaarIsMyHaven
                         }
                     }
                 }
+
                 // purchaseInteraction.onPurchase.AddListener((interactor) => shopTerminalBehavior.SetNoPickup());
                 whichStallsHaveBeenBoughtOnce.Add(purchaseInteraction, new List<PlayerCharacterMasterController>());
                 //Main.instance.StartCoroutine(DelayRerollEffect(shopTerminalBehavior, 0.1f, false));
