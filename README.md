@@ -27,17 +27,18 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
     - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
     - Queued update system allows slow clients to process messages without causing mismatches.
 
-This was my own summarization of what I understand. Me, the human. Speaking of which...
+This was my own summarization of what I understand. Me, the human. I am a goblin with no cooperation experience in creating git commits. My gits will be as bad as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
 
+---
 **AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
-        Ah, the death-mark a project. 
 
-Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. Not reflected are my attempts at doing this myself. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses. 
+The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. Not reflected are my attempts at doing this myself. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses. 
 
 I did not use code wholesale. Any assistance that was given was in pieces, I still had to put it together and ensure it works. I uploaded this Github so you can curate my code directly without having to use ILSpy too disparage my character or lackluster coding ability for using AI. Consequently, Astra was used to help initialize the project, and update any packages, getting ready for work in Visual Studio 2026. I did not supply the solution file, but can if requested. I wanted to keep this as similar to Deflaktor's and Lunzir's organization as possible. 
 
-Not that any of this matters right? I used AI, therefore its bad. Thats fine. I agree, I cannot argue with that. I too hate AI Slop. I just believe I put the nessesary work to ensure none of that is reflected in that project. This project wont break your project settings, it wont cause memory leaks, it wont blue screen your computer. I actually tested it, and its built off the don't trust me, atleast trust the forks.
+Not that any of this matters right? Its AI Slop no matter how I frame it to you. The people has spoken all around the internet, and that's fine. I agree, I cannot argue with that. I too hate AI Slop. I just believe I put the necessary work to ensure none of that is reflected in that project. This project wont break your game settings, it wont cause memory leaks, it wont blue screen your computer. I did my best to test it, with MultiplayerTestMod, UnityExplorer and all that jazz. Not to mention was based off the brilliant hard work of the previous authors and their forks. You don't need to trust me, at least trust them. 
 
+---
 
 ## Features ##
 Please reffer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I shall only go over what I added and changed
