@@ -7,18 +7,20 @@ This is an independently maintained derivative of [BazaarIsMyHaven](https://thun
 The project aims to fix the issues of BazaarIsMyHaven while potentially introducing requested features as well.
 
 - **Fixed Features**
-  - Shop Terminals not retaining scale for clients
+  - Shop Terminals not retaining scale for clients, now they do
       - As a server only mod, this was done by using the Drifterhoard prefab which includes ItemShareController.RpcParentToMuzzle procedure. This RPC function re-scales game-objects even for clients. I do not like this myself, but I wanted to keep this mod server-sided as best as I can
-          - #TO-DO: Optional client side networking to properly sync scale without having to use work around.
-  - Re-rolling breaking in newest version
-  - Purchases being free
+          - Display of the Item in the buds display container is also resolved, though I still remain unhappy with some of the implementation. I hope to refine this in the future.
+  - Re-rolling did not appear to work, now it does.
+      - It also has additional checks and bookkeeping to ensure it works for both clients and host.
+  - Purchases being free was a deliberate choice due to the lack of a cost hologram, but with the ability to actually use lunar buds makes it less of an issue, so they now actually have a price on them.
+      - Lunar buds have the cost hologram, and it appears to be networked, removing the original multiplayer caution. 
   - Instancing not working correctly under specific circumstances
       - Instancing also did not mesh well with re-rolling
   - Buds make a return, now you can have more than 5 buds with Shop features.
 
 - **Reworked Features**
   - Instancing was reworked to include extra states, a queue, and additional bookkeeping for use for re-rolling.
-      - When instance purchases was on, various buggy interactions could happen. Host could buy an item, and clients would receive nothing on the same item. Rer-oll would re-roll items already purchased from clients. Host was largely authoritative over tracking purchases.
+      - When instance purchases was on, various buggy interactions could happen. Host could buy an item, and clients would receive nothing on the same item. Re-roll would re-roll items already purchased from clients. Host was largely authoritative over tracking purchases.
   ~Added Changes
     - Correct buyer states; purchases temporarily use the buyer's shop data then restores the host's view.
         - Instances also track for states to protect re-roll, and swapped equipment
@@ -26,6 +28,10 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
     - broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability,.
     - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
     - Queued update system allows slow clients to process messages without causing mismatches.
+
+  - **New Features**
+    - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will not have the cost.
+    - Technically discussed earlier, but a proper client side syncing is available for clients who have the mod installed. Offers a much more reliable, and cleaner way to adjust model size and corrections without having to resort to workarounds.
 
 This was my own summarization of what I understand. Me, the human. I am a goblin with no experience in creating git commits. I usually never share my work, my commits will be as horrible as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
 
@@ -46,7 +52,8 @@ Project was edited and made with Visual Studio Community 2026 with the **.NET de
 ## Features ##
 Please reffer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I shall only go over what I added and changed
 
-# Known Issues
+# Known Issues / Multiplayer Considerations
 
-With a heavy heart I have to admit that I still could not figure out a way to sync client scale for terminals. Oriignally, with terminals, the scale in the prefab was set to .75. This isnt quite noticable, but was when I reimplemented lunar buds to the equation, which had a default scale of .5. 
-This cannot be fixed with a host only mod. However, will be fixed if the client shares the same mod, this is still completely optional.
+I tested what I could being a lonely guy with no friends, but scale syncing appears to work now, for modded clients or un-modded. Client having the mod is completely optional, but if they do have it, they get some extra features. If Replace Lunar with Terminals is active, lunar terminals now have their cost on the terminals. It still remains unsolved if I can spawn the cost sign for un-modded clients.
+
+Its also currently possible slow clients could experience issues with delays in model size corrections, or have it not work entirely, but this should be rare.
