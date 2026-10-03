@@ -22,9 +22,13 @@ namespace BazaarIsMyHaven
         };
 
         public abstract void Preload();
-        public abstract void Hook();
-        public abstract void RunStart();
         public abstract void SetupBazaar();
+
+        // Sections only override these when they need hooks or run-specific work.
+        public virtual void Hook() { }
+        public virtual void RunStart() { }
+        public virtual void RunEnd() { }
+
         protected List<GameObject> DoSpawnCard(Dictionary<int, SpawnCardStruct> keyValuePairs, AsyncOperationHandle<InteractableSpawnCard> card, int max)
         {
             int count = 0;
@@ -35,6 +39,11 @@ namespace BazaarIsMyHaven
             {
                 SpawnCard spawnCard = card.WaitForCompletion();
                 GameObject gameObject = spawnCard.DoSpawn(keyValuePairs[i].Position, Quaternion.identity, new DirectorSpawnRequest(spawnCard, DirectPlacement, Run.instance.runRNG)).spawnedInstance;
+                if (!gameObject) //Sanity checks to inform if anything doesn't spawn
+                {
+                    Log.LogWarning($"Could not spawn {spawnCard.name} at slot {i}.");
+                    continue;
+                }
                 gameObject.transform.eulerAngles = keyValuePairs[i].Rotation;
                 result.Add(gameObject);
             }
