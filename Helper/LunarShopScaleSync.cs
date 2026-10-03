@@ -21,6 +21,8 @@ namespace BazaarIsMyHaven
         private readonly List<NetworkIdentity> shops = new List<NetworkIdentity>();
         private readonly HashSet<NetworkConnection> synchronizedClients = new HashSet<NetworkConnection>();
         private bool fallbackUnavailable;
+        private bool fallbackHologramUnavailable;
+        private LunarShopFallbackHologram fallbackHologram;
 
         public static void Preload()
         {
@@ -199,6 +201,8 @@ namespace BazaarIsMyHaven
 
             if (fallbackClients.Count > 0) //Fallback using workaround for syncing scale without client having the mod
             {
+                EnsureFallbackHologram();
+
                 try
                 {
                     if (!SendFallbackScaleUpdates(fallbackClients))
@@ -215,6 +219,33 @@ namespace BazaarIsMyHaven
             }
 
             return allSent;
+        }
+
+        private void EnsureFallbackHologram()
+        {
+            // Only replacement terminals need a shared fallback sign. Buds already have their own prices.
+            if (fallbackHologram || fallbackHologramUnavailable || !shops[0].GetComponent<LunarShopHologram>())
+            {
+                return;
+            }
+
+            try
+            {
+                fallbackHologram = LunarShopFallbackHologram.Create(shops[0].gameObject);
+            }
+            catch (Exception exception)
+            {
+                fallbackHologramUnavailable = true;
+                Log.LogError($"Could not create the shared lunar price sign: {exception}");
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (fallbackHologram)
+            {
+                NetworkServer.Destroy(fallbackHologram.gameObject);
+            }
         }
 
         internal static void ReceiveScale(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection, bool addCostHologram, string shopName, bool parentToLunarShop)

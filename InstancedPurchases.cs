@@ -320,6 +320,9 @@ namespace BazaarIsMyHaven
             return writer.ToArray();
         }
 
+        //Why must unity not sync scale properly. I wouldnt have this problem if unity synced scale. I was so fuckin exhausted fixing every scale mismatched that
+        //This function definately has known repetitive bookkeeping. Its solely to maintain visual consistency for unmodded clients.
+        //Why am I so stubborn in enforcing server-sided compatibility. 
         internal static byte[] CreatePickupDisplayRefresh(NetworkIdentity identity, NetworkConnection connection, int channel)
         {
             var terminal = identity.GetComponent<ShopTerminalBehavior>();

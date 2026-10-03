@@ -140,6 +140,15 @@ namespace BazaarIsMyHaven
 
         public void PurchaseInteraction_OnInteractionBegin(On.RoR2.PurchaseInteraction.orig_OnInteractionBegin orig, PurchaseInteraction self, Interactor activator)
         {
+            // The fallback station supplies a price label only; it must never accept a purchase.
+            if (self.GetComponent<LunarShopFallbackHologram>())
+            {
+                //The reason this is important is the seers sign for non-clients however the host still owns its network object. Even though only the client which is unmodded
+                //Can see, and even potentially interact with the seers sign, a request is sent to the host
+                //This was proposed as a defensive guard... all this just to give non-clients a price tag reference ...
+                return;
+            }
+
             if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
                 var body = activator ? activator.GetComponent<CharacterBody>() : null;
@@ -508,15 +517,15 @@ namespace BazaarIsMyHaven
                     tableEndAngleMiddle -= angleDiff / (float)(count + 1f);
                 }
 
-                //Attempts to correct the arch of how the lunar shops are placed on the table between 3 and 7. I felt those numbers matched the best for said correction. 
-                //In turn, it makes 5 lunar buds be approximately in where the original 5 where.
-                if (count >= 3 && count <= 7)
+                //Attempts to correct the arch of how the lunar shops are placed on the table between a range
+                //In turn, it makes 5 lunar buds be approximately in where the original 5 where, this can potentially be completely removed
+                if (count >= 3 && count < 10)
                 {
                     const float maximumExtraArc = 90f;
                     const float maximumCorrectedArc = 180f;
 
-                    // Full correction at 3 shops, fading to zero at 8.
-                    float correctionWeight = (8f - count) / 5f;
+                    // Full correction at 3 shops, fading to zero at 10.
+                    float correctionWeight = (10f - count) / 7f;
                     float middleAngle = (tableStartAngleMiddle + tableEndAngleMiddle) / 2f;
                     float currentArc = tableEndAngleMiddle - tableStartAngleMiddle;
                     float correctedArc = Mathf.Min(currentArc + maximumExtraArc * correctionWeight, maximumCorrectedArc);
