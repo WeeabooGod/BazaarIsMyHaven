@@ -53,6 +53,7 @@ namespace BazaarIsMyHaven
                 shop.transform.SetParent(null, true);
                 shop.transform.localScale = Vector3.one;
                 shop.transform.SetParent(parent, true);
+                RefreshPickupDisplay(shop);
                 sync.shops.Add(shop.GetComponent<NetworkIdentity>());
             }
 
@@ -71,6 +72,19 @@ namespace BazaarIsMyHaven
             }
 
             return null;
+        }
+
+        private static void RefreshPickupDisplay(GameObject shop)
+        {
+            var terminal = shop.GetComponent<ShopTerminalBehavior>();
+            if (terminal && terminal.pickupDisplay)
+            {
+                // The item model caches its size when created. Invalidate the prefab cache so even
+                // an unchanged item is rebuilt at the corrected scale, without rerolling stock.
+                var display = terminal.pickupDisplay;
+                display.modelPrefab = null;
+                display.RebuildModel(null);
+            }
         }
 
         private IEnumerator SynchronizeClients()
@@ -251,6 +265,7 @@ namespace BazaarIsMyHaven
                             LunarShopHologram.AddTo(shop);
                         }
 
+                        RefreshPickupDisplay(shop);
                         Log.LogDebug($"Applied direct lunar shop scale {scale} to object {shopId}.");
                     }
 
@@ -285,13 +300,23 @@ namespace BazaarIsMyHaven
                 NetworkServer.Spawn(helper);
 
                 var helperIdentity = helper.GetComponent<NetworkIdentity>();
-                var messages = shops.Select(shop => CreateFallbackScaleMessages(helperIdentity.netId, shop)).ToArray();
 
                 foreach (var connection in clients)
                 {
                     bool sent = true;
-                    foreach (var message in messages)
+                    foreach (var shop in shops)
                     {
+                        // Each client may own different stock. Append its display refresh after the
+                        // scale RPC and teleport, in the same buffer, so the order is preserved.
+                        // All this just to fuckin FIX SCALING FUCK YOU UNITY FUCK NETWORKING
+                        var refresh = InstancedPurchases.CreatePickupDisplayRefresh(shop, connection, QosChannelIndex.defaultReliable.intVal);
+                        if (refresh == null)
+                        {
+                            sent = false;
+                            continue;
+                        }
+
+                        var message = CreateFallbackScaleMessages(helperIdentity.netId, shop, refresh);
                         sent = connection.SendBytes(message, message.Length, QosChannelIndex.defaultReliable.intVal) && sent;
                     }
 
@@ -316,7 +341,7 @@ namespace BazaarIsMyHaven
             return allSent;
         }
 
-        private static byte[] CreateFallbackScaleMessages(NetworkInstanceId helperId, NetworkIdentity shop)
+        private static byte[] CreateFallbackScaleMessages(NetworkInstanceId helperId, NetworkIdentity shop, byte[] displayRefresh)
         {
             var scaleWriter = new NetworkWriter();
             scaleWriter.StartMessage(MsgType.Rpc);
@@ -338,12 +363,13 @@ namespace BazaarIsMyHaven
             }.Serialize(teleportWriter);
             teleportWriter.FinishMessage();
 
-            // Send both framed messages as one small buffer so a packet boundary cannot leave a shop at origin.
+            // Keep scale, position restoration, and the display rebuild together and in that order.
             var scaleBytes = scaleWriter.ToArray();
             var teleportBytes = teleportWriter.ToArray();
-            var messages = new byte[scaleBytes.Length + teleportBytes.Length];
+            var messages = new byte[scaleBytes.Length + teleportBytes.Length + displayRefresh.Length];
             Buffer.BlockCopy(scaleBytes, 0, messages, 0, scaleBytes.Length);
             Buffer.BlockCopy(teleportBytes, 0, messages, scaleBytes.Length, teleportBytes.Length);
+            Buffer.BlockCopy(displayRefresh, 0, messages, scaleBytes.Length + teleportBytes.Length, displayRefresh.Length);
             return messages;
         }
     }

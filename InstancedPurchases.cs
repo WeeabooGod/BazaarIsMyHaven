@@ -320,6 +320,93 @@ namespace BazaarIsMyHaven
             return writer.ToArray();
         }
 
+        internal static byte[] CreatePickupDisplayRefresh(NetworkIdentity identity, NetworkConnection connection, int channel)
+        {
+            var terminal = identity.GetComponent<ShopTerminalBehavior>();
+            var instance = identity.GetComponent<InstancedPurchase>();
+            PlayerCharacterMasterController player = null;
+            InstancedPurchaseStruct state = null;
+
+            if (instance)
+            {
+                foreach (var pc in PlayerCharacterMasterController.instances)
+                {
+                    if (pc && pc.networkUser && pc.networkUser.connectionToClient == connection)
+                    {
+                        player = pc;
+                        break;
+                    }
+                }
+
+                // A late join may observe shops before its player is ready. Retry instead of
+                // sending the host's stock or a different player's personalized offer.
+                if (!player)
+                {
+                    return null;
+                }
+
+                state = instance.GetOrOriginal(player);
+            }
+
+            var pickup = state != null ? state.pickup : terminal.pickup;
+            if (pickup.Equals(UniquePickup.none))
+            {
+                return Array.Empty<byte>();
+            }
+
+            bool originalHidden = state != null ? state.hidden : terminal.hidden;
+            var previousRecipient = instance ? instance.pcClient : null;
+            try
+            {
+                if (instance)
+                {
+                    instance.pcClient = player;
+                    state.hidden = !originalHidden;
+                }
+                else
+                {
+                    terminal.hidden = !originalHidden;
+                }
+
+                // Hidden alone does not rebuild the display. Apply it first, then resend the
+                // same pickup to show the alternate model. Repeat with the real hidden value.
+                // These temporary values are only used while serializing this client's messages.
+                var hideMessage = CreateUpdateMessage(identity, channel, HiddenMask, 0u);
+                var alternateModelMessage = CreateUpdateMessage(identity, channel, PickupMask, 0u);
+
+                if (state != null)
+                {
+                    state.hidden = originalHidden;
+                }
+                else
+                {
+                    terminal.hidden = originalHidden;
+                }
+
+                var restoreHiddenMessage = CreateUpdateMessage(identity, channel, HiddenMask, 0u);
+                var restoreModelMessage = CreateUpdateMessage(identity, channel, PickupMask, 0u);
+                var writer = new NetworkWriter();
+                foreach (var message in new[] { hideMessage, alternateModelMessage, restoreHiddenMessage, restoreModelMessage })
+                {
+                    writer.Write(message, message.Length);
+                }
+
+                return writer.ToArray();
+            }
+            finally
+            {
+                if (instance)
+                {
+                    state.hidden = originalHidden;
+                    instance.pcClient = previousRecipient;
+                }
+                else
+                {
+                    terminal.hidden = originalHidden;
+                }
+            }
+        }
+
         internal static bool SendUpdateToClient(InstancedPurchase instance, PlayerCharacterMasterController pc)
         {
             var identity = instance.GetComponent<NetworkIdentity>();

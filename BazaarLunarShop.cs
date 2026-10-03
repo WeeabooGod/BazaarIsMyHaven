@@ -502,11 +502,31 @@ namespace BazaarIsMyHaven
             {
                 if (count < middleCapacity)
                 {
-                    // place them closer together
+                    // place them closer together --Edit: useful for more than 5 lunar shops, but tightens lunar shops when there is less terminals.
                     float angleDiff = tableEndAngleMiddle - tableStartAngleMiddle;
                     tableStartAngleMiddle += angleDiff / (float)(count + 1f);
                     tableEndAngleMiddle -= angleDiff / (float)(count + 1f);
                 }
+
+                //Attempts to correct the arch of how the lunar shops are placed on the table between 3 and 7. I felt those numbers matched the best for said correction. 
+                //In turn, it makes 5 lunar buds be approximately in where the original 5 where.
+                if (count >= 3 && count <= 7)
+                {
+                    const float maximumExtraArc = 90f;
+                    const float maximumCorrectedArc = 180f;
+
+                    // Full correction at 3 shops, fading to zero at 8.
+                    float correctionWeight = (8f - count) / 5f;
+                    float middleAngle = (tableStartAngleMiddle + tableEndAngleMiddle) / 2f;
+                    float currentArc = tableEndAngleMiddle - tableStartAngleMiddle;
+                    float correctedArc = Mathf.Min(currentArc + maximumExtraArc * correctionWeight, maximumCorrectedArc);
+
+                    tableStartAngleMiddle = middleAngle - correctedArc / 2f;
+                    tableEndAngleMiddle = middleAngle + correctedArc / 2f;
+                }
+
+
+
                 points = GenerateCirclePoints(tableRadiusMiddle, tableStartAngleMiddle, tableEndAngleMiddle, orientation, count);
                 points.Reverse();
             }
