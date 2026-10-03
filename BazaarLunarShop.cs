@@ -2,7 +2,6 @@
 using BepInEx.Bootstrap;
 using RoR2;
 using System;
-using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,8 +83,6 @@ namespace BazaarIsMyHaven
             if (ModConfig.LunarShopSectionEnabled.Value)
             {
                 lunarRecyclerRerolledCount = 0;
-            }
-            if (ModConfig.LunarShopSectionEnabled.Value) {
                 generateNewPickupIndex = 0;
                 whichStallsHaveBeenBoughtOnce.Clear();
                 SpawnLunarShopTerminal();
@@ -293,21 +290,18 @@ namespace BazaarIsMyHaven
                         return;
                     }
 
-                    if (body != null)
+                    var droppedEquipment = Helper.GivePickup(body, self.CurrentPickup().pickupIndex, self.transform.position, false);
+                    if (droppedEquipment != EquipmentIndex.None)
                     {
-                        var droppedEquipment = Helper.GivePickup(body, self.CurrentPickup().pickupIndex, self.transform.position, false);
-                        if (droppedEquipment != EquipmentIndex.None)
-                        {
-                            self.SetPickup(new UniquePickup(PickupCatalog.FindPickupIndex(droppedEquipment)));
-                            var purchaseInteraction = self.GetComponent<PurchaseInteraction>();
-                            purchaseInteraction.SetAvailable(true);
-                        }
-                        else
-                        {
-                            self.SetHasBeenPurchased(newHasBeenPurchased: true);
-                            SendPurchasedFlagToClients(self);
-                            self.SetNoPickup();
-                        }
+                        self.SetPickup(new UniquePickup(PickupCatalog.FindPickupIndex(droppedEquipment)));
+                        var purchaseInteraction = self.GetComponent<PurchaseInteraction>();
+                        purchaseInteraction.SetAvailable(true);
+                    }
+                    else
+                    {
+                        self.SetHasBeenPurchased(newHasBeenPurchased: true);
+                        SendPurchasedFlagToClients(self);
+                        self.SetNoPickup();
                     }
                 }
                 else
@@ -638,15 +632,10 @@ namespace BazaarIsMyHaven
         //Helper function that aims to disable the defualt "SetNoPickup()" behavior in lunar buds so they can "swap" equipment only when the lunar shop section is enabled
         private void DisableLunarBudPickupClearing(PurchaseInteraction purchaseInteraction, ShopTerminalBehavior shopTerminalBehavior)
         {
-            var purchaseEventField = typeof(PurchaseInteraction).GetField("onPurchase", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-            if (purchaseEventField == null)
-            {
-                Log.LogWarning("Could Not Find the Lunar Buds purchase Event");
-                return;
-            }
-
-            var purchaseEvent = (UnityEventBase)purchaseEventField.GetValue(purchaseInteraction);
+            // Lunar buds still store their SetNoPickup listener on this legacy event.
+            #pragma warning disable CS0618
+            var purchaseEvent = purchaseInteraction.onPurchase;
+            #pragma warning restore CS0618
 
             if (purchaseEvent == null)
             {
