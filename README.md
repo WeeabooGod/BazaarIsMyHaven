@@ -9,14 +9,15 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
 - **Fixed Features**
   - Shop Terminals not retaining scale for clients, now they do
       - As a server only mod, this was done by using the Drifterhoard prefab which includes ItemShareController.RpcParentToMuzzle procedure. This RPC function re-scales game-objects even for clients. I do not like this myself, but I wanted to keep this mod server-sided as best as I can
-          - Display of the Item in the buds display container is also resolved, though I still remain unhappy with some of the implementation. I hope to refine this in the future.
-  - Re-rolling did not appear to work, now it does.
+          - The floating item display also had wonky scaling inconsistencies which are also fixed for clients
+          - This problem may have not been noticed by much, only really becomes noticeable with lunar buds. Terminals, which the original mod recommends have a scale of .75 so did not really appear that much smaller. Overall you also had to have the lunar shop section enabled all together.
+  - Re-rolling did not appear to work (when you had terminals and lunar shop modifications), now it does.
       - It also has additional checks and bookkeeping to ensure it works for both clients and host.
   - Purchases being free was a deliberate choice due to the lack of a cost hologram, but with the ability to actually use lunar buds makes it less of an issue, so they now actually have a price on them.
-      - Lunar buds have the cost hologram, and it appears to be networked, removing the original multiplayer caution. 
+      - Lunar buds have the cost hologram, and it appears to be networked. Terminals do not for clients, but a solution was to create a single cost hologram based off a seers terminal clone for un-mooded clients. 
   - Instancing not working correctly under specific circumstances
       - Instancing also did not mesh well with re-rolling
-  - Buds make a return, now you can have more than 5 buds with Shop features.
+  - Buds make a return, now you can have more than 5 buds with Shop features up to 20. They have all the traditional functionality and animations and can even swap lunar equipment. 
 
 - **Reworked Features and Added Changes**
   - Instancing was reworked to include extra states, a queue, and additional bookkeeping for use for re-rolling.
@@ -24,12 +25,12 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
   - Correct buyer states; purchases temporarily use the buyer's shop data then restores the host's view.
       - Instances also track for states to protect re-roll, and swapped equipment
           - Old re-roll path called normal shop-generation. We can now skip purchased shops and have various states to ensure each instance client gets only what should be re-rolled. 
-  - broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability,.
+  - Networking broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability which often resulted in mismatching re-rolling.
   - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
-  - Queued update system allows slow clients to process messages without causing mismatches.
+  - Queued shop update system allows slow clients to process messages without causing mismatches.
 
 - **New Features**
-  - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will not have the cost.
+  - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will only have a single cost on the side of the table. No more price ambiguity.
   - Technically discussed earlier, but a proper client side syncing is available for clients who have the mod installed. Offers a much more reliable, and cleaner way to adjust model size and corrections without having to resort to workarounds.
 
 This was my own summarization of what I understand. Me, the human. I am a goblin with no experience in creating git commits. I usually never share my work, my commits will be as horrible as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
@@ -37,19 +38,15 @@ This was my own summarization of what I understand. Me, the human. I am a goblin
 ---
 **AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
 
-The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses.
+The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. I already know I am going to hell for this, but I suppose I shall share my carefully curated verified and tested slop to the masses.
 
-I did not use code wholesale. Any assistance that was given was in pieces, I still had to put it together and ensure it works. Please feel free to curate my commits and provide reasons why my code is bad, I'll do my best to fix them. Consequently, Astra was used to help initialize the project
-
-I believe I put the necessary work to ensure none of what people usually mean by "AI Slop" is reflected in this project. This project wont break your game settings, it wont cause memory leaks, it wont blue screen your computer. I did my best to test it, with MultiplayerTestMod, UnityExplorer and all that jazz.
+I did not use code wholesale. Any assistance that was given was in pieces, layered with advice and constant refining. At any given moment I always picked apart anything that was given, I aimed to actually tried to find real solutions. I hope to be believed on this, despite the Internets aversion to AI usage. Astra was used to help initialize the project in the very beginning. Despite my usage, it was only used to fix problems. Existing code was only modified where I felt fit, by me, myself, and I. I want to believe I still put a lot of work into this to prevent any of the usual reasons people avoid AI. I am even open to suggestions on changes and improvements. All I want to do is make a mod I like using work a bit better.
 
 ---
+Please refer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I only went over what I changed and fixed.
 
 ## Building 
 Project was edited and made with Visual Studio Community 2026 with the **.NET desktop development** workload and .NET SDK **10.0.401 or a later stable 10.0 feature band**. the supplied .csproj should still work for other IDE's though.
-
-## Features ##
-Please reffer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I shall only go over what I added and changed
 
 # Known Issues / Multiplayer Considerations
 
