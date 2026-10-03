@@ -32,11 +32,9 @@ This was my own summarization of what I understand. Me, the human. I am a goblin
 ---
 **AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
 
-The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. Not reflected are my attempts at doing this myself. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses. 
-
-I did not use code wholesale. Any assistance that was given was in pieces, I still had to put it together and ensure it works. I uploaded this Github so you can curate my code directly without having to use ILSpy too disparage my character or lackluster coding ability for using AI. Consequently, Astra was used to help initialize the project, and update any packages, getting ready for work in Visual Studio 2026. I did not supply the solution file, but can if requested. I wanted to keep this as similar to Deflaktor's and Lunzir's organization as possible. 
-
-Not that any of this matters right? Its AI Slop no matter how I frame it to you. The people has spoken all around the internet, and that's fine. I agree, I cannot argue with that. I too hate AI Slop. I just believe I put the necessary work to ensure none of that is reflected in that project. This project wont break your game settings, it wont cause memory leaks, it wont blue screen your computer. I did my best to test it, with MultiplayerTestMod, UnityExplorer and all that jazz. Not to mention was based off the brilliant hard work of the previous authors and their forks. You don't need to trust me, at least trust them. 
+The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses. 
+I did not use code wholesale. Any assistance that was given was in pieces, I still had to put it together and ensure it works. Please feel free to curate my commits and provide reasons why my code is bad, I'll do my best to fix them. Consequently, Astra was used to help initialize the project
+I believe I put the necessary work to ensure none of what people usually mean by "AI Slop" is reflected in this project. This project wont break your game settings, it wont cause memory leaks, it wont blue screen your computer. I did my best to test it, with MultiplayerTestMod, UnityExplorer and all that jazz.
 
 ---
 
