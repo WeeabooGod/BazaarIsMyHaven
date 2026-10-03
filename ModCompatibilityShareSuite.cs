@@ -15,6 +15,8 @@ namespace BazaarIsMyHaven
     {
         private static bool? _enabled;
         private static BaseUnityPlugin _plugin;
+        private static ConfigEntry<bool> printerCauldronFix;
+        private static bool fieldChecked;
 
         public static bool enabled
         {
@@ -49,7 +51,22 @@ namespace BazaarIsMyHaven
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static bool IsShareSuite_PrinterCauldronFixEnabled()
         {
-            return plugin.GetFieldValue<ConfigEntry<bool>>("PrinterCauldronFixEnabled").Value;
+            //More sanity checks Usually if this is implemented correctly no issue, but never hurts to be careful
+            if (!fieldChecked)
+            {
+                fieldChecked = true;
+                try
+                {
+                    if (plugin != null)
+                        printerCauldronFix = plugin.GetFieldValue<ConfigEntry<bool>>("PrinterCauldronFixEnabled");
+                }
+                catch (Exception exception)
+                {
+                    Log.LogWarning($"Could not read SharSuite's cauldron setting - {exception.Message}");
+                }
+            }
+
+            return printerCauldronFix != null && printerCauldronFix.Value;
         }
 
     }

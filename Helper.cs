@@ -67,9 +67,15 @@ namespace BazaarIsMyHaven
 
         public static bool IsToolbotWithSwapSkill(CharacterMaster master)
         {
+            if (!master || !master.bodyPrefab)
+                return false;
+
             var body = master.bodyPrefab.GetComponent<CharacterBody>();
             var skillFamily = Helper.FindSkillByFamilyName("ToolbotBodySpecialFamily");
             var skillDef = SkillCatalog.GetSkillDef(SkillCatalog.FindSkillIndexByName("Swap"));
+            if (!body || !skillFamily || !skillDef || master.loadout == null)
+                return false;
+
             return Helper.HasSkillVariantEnabled(master.loadout, body.bodyIndex, skillFamily, skillDef);
         }
 
@@ -106,12 +112,15 @@ namespace BazaarIsMyHaven
         public static Dictionary<EquipmentIndex, int> GivePickups(CharacterBody characterBody, Dictionary<PickupIndex, int> itemsToGive, Vector3? itemOrbSource, bool dropReplacedEquipmentsAsPickupDroplets)
         {
             Dictionary<EquipmentIndex, int> droppedEquipments = new Dictionary<EquipmentIndex, int>();
+            if (!characterBody || itemsToGive == null)
+                return droppedEquipments;
+
             var inventory = characterBody.inventory;
-            if (inventory == null)
-                return null;
+            if (!inventory)
+                return droppedEquipments;
             var master = characterBody.master;
-            if (master == null)
-                return null;
+            if (!master)
+                return droppedEquipments;
             var itemTakenOrbs = 0;
             uint equipmentsGiven = 0;
             int equipSkip = 0;
@@ -121,6 +130,9 @@ namespace BazaarIsMyHaven
                 if (itemAmount <= 0 || pickupIndex == PickupIndex.none)
                     continue;
                 var pickupDef = PickupCatalog.GetPickupDef(pickupIndex);
+                if (pickupDef == null)
+                    continue;
+
                 // handle items
                 var itemIndex = pickupDef.itemIndex;
                 var equipmentIndex = pickupDef.equipmentIndex;
@@ -146,7 +158,7 @@ namespace BazaarIsMyHaven
                         if (index >= maxEquipmentCount)
                         {
                             equipLoop = true;
-                            index = 0;
+                            index %= maxEquipmentCount;
                         }
                         uint slot = (uint)(index % maxEquipmentSlots);
                         uint set = (uint)(index / maxEquipmentSlots);
@@ -173,7 +185,7 @@ namespace BazaarIsMyHaven
                             else
                             {
                                 // we already looped once -> time to drop the old equipment
-                                droppedEquipments[equipmentState.equipmentIndex] = droppedEquipments.GetValueOrDefault(equipmentIndex) + 1;
+                                droppedEquipments[equipmentState.equipmentIndex] = droppedEquipments.GetValueOrDefault(equipmentState.equipmentIndex) + 1;
                                 if (dropReplacedEquipmentsAsPickupDroplets) { 
                                     var oldEquipment = new UniquePickup(PickupCatalog.FindPickupIndex(equipmentState.equipmentIndex));
                                     PickupDropletController.CreatePickupDroplet(oldEquipment, characterBody.corePosition + Vector3.up * 1.5f, Vector3.up * 15f - characterBody.coreTransform.forward * 15f, false);
@@ -188,6 +200,14 @@ namespace BazaarIsMyHaven
                                 equipmentsGiven++;
                             }
                         }
+                    }
+
+                    // Keep excess equipment rewards instead of silently discarding them.
+                    while (equipmentIndex != EquipmentIndex.None && equipmentAmount > 0)
+                    {
+                        var extraEquipment = new UniquePickup(pickupIndex);
+                        PickupDropletController.CreatePickupDroplet(extraEquipment, characterBody.corePosition + Vector3.up * 1.5f, Vector3.up * 15f, false);
+                        equipmentAmount--;
                     }
                 }
             }

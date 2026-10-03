@@ -10,6 +10,7 @@ namespace BazaarIsMyHaven
     public static class ModCompatibilityInLobbyConfig
     {
         private static bool? _enabled;
+        private static bool registered;
 
         public static bool enabled
         {
@@ -25,6 +26,11 @@ namespace BazaarIsMyHaven
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static void CreateFromBepInExConfigFile(ConfigFile config, string displayName)
         {
+            if (registered)
+            {
+                return;
+            }
+
             var configuration = InLobbyConfig.Fields.ConfigFieldUtilities.CreateFromBepInExConfigFile(config, displayName);
            
             foreach (var section in configuration.SectionFields)
@@ -46,6 +52,7 @@ namespace BazaarIsMyHaven
                 }
             }
             InLobbyConfig.ModConfigCatalog.Add(configuration);
+            registered = true;
         }
     }
 }

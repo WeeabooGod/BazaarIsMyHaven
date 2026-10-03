@@ -21,10 +21,11 @@ namespace BazaarIsMyHaven
             placementMode = DirectorPlacementRule.PlacementMode.Direct
         };
 
+        //Abstracts require implementatione verywhere
         public abstract void Preload();
         public abstract void SetupBazaar();
 
-        // Sections only override these when they need hooks or run-specific work.
+        //Virtual only requires implementation where needed, and not every part implements these. I figured this would be simplier and cleaner.
         public virtual void Hook() { }
         public virtual void RunStart() { }
         public virtual void RunEnd() { }
