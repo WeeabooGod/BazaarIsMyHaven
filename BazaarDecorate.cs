@@ -36,14 +36,6 @@ namespace BazaarIsMyHaven
             TeleporterBeaconEffect = Addressables.LoadAssetAsync<GameObject>("RoR2/Junk/Teleporter/TeleporterBeaconEffect.prefab");
         }
 
-        public override void Hook()
-        {
-            
-        }
-        public override void RunStart()
-        {
-
-        }
         public override void SetupBazaar()
         {
             if (ModConfig.DecorateBazaar.Value)
@@ -61,6 +53,8 @@ namespace BazaarIsMyHaven
         {
             SpawnCard spawnCard = iscShopPortal.WaitForCompletion();
             GameObject gameObject = spawnCard.DoSpawn(new Vector3(-135f, -23f, -60f), Quaternion.identity, new DirectorSpawnRequest(spawnCard, DirectPlacement, Run.instance.runRNG)).spawnedInstance;
+            if (!gameObject)
+                return;
             gameObject.transform.eulerAngles = new Vector3(0.0f, 220f, 0.0f);
         }
 

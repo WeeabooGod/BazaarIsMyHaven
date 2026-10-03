@@ -20,15 +20,6 @@ namespace BazaarIsMyHaven
             iscScrapper = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/Scrapper/iscScrapper.asset");
         }
 
-        public override void Hook()
-        {
-
-        }
-        public override void RunStart()
-        {
-
-        }
-
         public override void SetupBazaar()
         {
             if(ModConfig.ScrapperSectionEnabled.Value)

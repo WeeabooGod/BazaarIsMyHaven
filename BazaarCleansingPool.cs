@@ -35,10 +35,6 @@ namespace BazaarIsMyHaven
             On.RoR2.ShopTerminalBehavior.SetPickup += ShopTerminalBehavior_SetPickup;
         }
 
-        public override void RunStart()
-        {
-
-        }
         public override void SetupBazaar()
         {
             if (ModConfig.CleansingPoolSectionEnabled.Value) { 

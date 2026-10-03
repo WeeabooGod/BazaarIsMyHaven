@@ -24,13 +24,6 @@ namespace BazaarIsMyHaven
             LunarRerollEffect = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/LunarRecycler/LunarRerollEffect.prefab");
         }
 
-        public override void Hook()
-        {
-        }
-        public override void RunStart()
-        {
-
-        }
         public override void SetupBazaar()
         {
             SpawnLunarSeerRecycler();

@@ -13,6 +13,7 @@ using UnityEngine.Networking;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.UIElements;
 using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 namespace BazaarIsMyHaven
 {
@@ -57,10 +58,26 @@ namespace BazaarIsMyHaven
             On.RoR2.PurchaseInteraction.SetAvailable += PurchaseInteraction_SetAvailable;
             On.RoR2.ShopTerminalBehavior.DropPickup += ShopTerminalBehavior_DropPickup;
             On.RoR2.ShopTerminalBehavior.GenerateNewPickupServer_bool += ShopTerminalBehavior_GenerateNewPickupServer_bool;
+            SceneManager.sceneUnloaded += SceneUnloaded;
         }
         public override void RunStart()
         {
+            RunEnd();
+        }
 
+        public override void RunEnd()
+        {
+            ObjectLunarShopTerminals_Spawn.Clear();
+            whichStallsHaveBeenBoughtOnce.Clear();
+            currentActivator = null;
+        }
+
+        private void SceneUnloaded(Scene scene)
+        {
+            if (scene.name == "bazaar")
+            {
+                RunEnd();
+            }
         }
         public override void SetupBazaar()
         {
@@ -268,7 +285,14 @@ namespace BazaarIsMyHaven
             {
                 if (ModConfig.LunarShopBuyToInventory.Value)
                 {
-                    var body = currentActivator.master.GetBody();
+                    var body = currentActivator && currentActivator.master ? currentActivator.master.GetBody() : null;
+                    if (!body || !body.inventory)
+                    {
+                        orig(self);
+                        SendPurchasedFlagToClients(self);
+                        return;
+                    }
+
                     if (body != null)
                     {
                         var droppedEquipment = Helper.GivePickup(body, self.CurrentPickup().pickupIndex, self.transform.position, false);
@@ -364,7 +388,7 @@ namespace BazaarIsMyHaven
 
             foreach (var entry in resolvedItems)
             {
-                if (entry.Value > 0)
+                if (entry.Value > 0 && PickupCatalog.GetPickupDef(entry.Key) != null)
                 {
                     pickup = new UniquePickup(entry.Key);
                     generateNewPickupIndex++;
@@ -709,26 +733,12 @@ namespace BazaarIsMyHaven
                 if (ModConfig.LunarShopInstancedPurchases.Value)
                 {
                     var instancedPurchase = gameObject.AddComponent<InstancedPurchase>();
+                    instancedPurchase.lunarShopIndex = i;
                     instancedPurchase.original.available = purchaseInteraction.available;
                     instancedPurchase.original.pickup = shopTerminalBehavior.pickup;
                     instancedPurchase.original.hasBeenPurchased = shopTerminalBehavior.hasBeenPurchased;
                     instancedPurchase.original.hidden = shopTerminalBehavior.hidden;
 
-                    foreach (var pc in PlayerCharacterMasterController.instances)
-                    {
-                        if (pc != null && pc.master != null && pc.master.bodyPrefab != null)
-                        {
-                            var bodyIndex = BodyCatalog.FindBodyIndex(pc.master.bodyPrefab);
-                            var amount = ModConfig.LunarShopAmountDependingOnCharacterParsed.GetValueOrDefault(bodyIndex, -1);
-                            if (amount > 0 && i >= amount)
-                            {
-                                instancedPurchase.GetOrCreate(pc).available = false;
-                                instancedPurchase.GetOrCreate(pc).pickup = UniquePickup.none;
-                                instancedPurchase.GetOrCreate(pc).hasBeenPurchased = true;
-                                InstancedPurchases.UpdateShop(gameObject, pc);
-                            }
-                        }
-                    }
                 }
 
                 // purchaseInteraction.onPurchase.AddListener((interactor) => shopTerminalBehavior.SetNoPickup());

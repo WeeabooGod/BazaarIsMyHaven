@@ -37,11 +37,6 @@ namespace BazaarIsMyHaven
             On.RoR2.ShopTerminalBehavior.SetPickup += ShopTerminalBehavior_SetPickup;
         }
 
-        public override void RunStart()
-        {
-            
-        }
-
         public override void SetupBazaar()
         {
             if (ModConfig.CauldronSectionEnabled.Value) {
@@ -77,14 +72,41 @@ namespace BazaarIsMyHaven
             {
                 if (self.name.StartsWith("LunarCauldron, RedToWhite Variant"))
                 {
+                    //Ensure order, payment, then items. Mostly cautionary.
                     if (IsMultiplayer() && ModCompatibilityShareSuite.enabled && ModCompatibilityShareSuite.IsShareSuite_PrinterCauldronFixEnabled())
                     {
-                        Inventory inventory = activator.GetComponent<CharacterBody>().inventory;
+                        var body = activator ? activator.GetComponent<CharacterBody>() : null;
+                        Inventory inventory = body ? body.inventory : null;
                         ShopTerminalBehavior shop = self.GetComponent<ShopTerminalBehavior>();
-                        inventory.GiveItemPermanent(PickupCatalog.GetPickupDef(shop.CurrentPickup().pickupIndex).itemIndex, 2);
+                        var pickupDef = shop ? PickupCatalog.GetPickupDef(shop.CurrentPickup().pickupIndex) : null;
+                        if (inventory && pickupDef != null && pickupDef.itemIndex != ItemIndex.None)
+                        {
+                            // Compensate only after the game accepts and pays for this purchase.
+                            bool compensated = false;
+                            UnityEngine.Events.UnityAction<CostTypeDef.PayCostContext, CostTypeDef.PayCostResults> listener =
+                                (context, results) =>
+                                {
+                                    if (!compensated && context.activator == activator && inventory)
+                                    {
+                                        compensated = true;
+                                        inventory.GiveItemPermanent(pickupDef.itemIndex, 2);
+                                    }
+                                };
+                            self.onDetailedPurchaseServer.AddListener(listener);
+                            try
+                            {
+                                orig(self, activator);
+                            }
+                            finally
+                            {
+                                self.onDetailedPurchaseServer.RemoveListener(listener);
+                            }
+                            return;
+                        }
                     }
                 }
             }
+
             orig(self, activator);
         }
 
@@ -95,17 +117,20 @@ namespace BazaarIsMyHaven
                 if (self.name.StartsWith("LunarCauldronGreen"))
                 {
                     CauldronHacked_SetPickupIndex(self, out List<PickupIndex> list);
-                    newPickup.pickupIndex = list[RNG.Next(0, list.Count)];
+                    if (list.Count > 0)
+                        newPickup.pickupIndex = list[RNG.Next(0, list.Count)];
                 }
                 if (self.name.StartsWith("LunarCauldronRed"))
                 {
                     CauldronHacked_SetPickupIndex(self, out List<PickupIndex> list);
-                    newPickup.pickupIndex = list[RNG.Next(0, list.Count)];
+                    if (list.Count > 0)
+                        newPickup.pickupIndex = list[RNG.Next(0, list.Count)];
                 }
                 if (self.name.StartsWith("LunarCauldronWhite"))
                 {
                     CauldronHacked_SetPickupIndex(self, out List<PickupIndex> list);
-                    newPickup.pickupIndex = list[RNG.Next(0, list.Count)];
+                    if (list.Count > 0)
+                        newPickup.pickupIndex = list[RNG.Next(0, list.Count)];
                 }
             }
             orig(self, newPickup, newHidden);
@@ -123,6 +148,11 @@ namespace BazaarIsMyHaven
                 for (int i = 0; i < count; i++)
                 {
                     AsyncOperationHandle<GameObject> randomCauldron = GetRandomLunarCauldron();
+                    if (!randomCauldron.IsValid())
+                    {
+                        Log.LogWarning("No cauldron types have a valid positive weight; skipping cauldrons.");
+                        break;
+                    }
                     GameObject gameObject = randomCauldron.WaitForCompletion();
                     gameObject = UnityEngine.Object.Instantiate<GameObject>(gameObject, DicCauldrons[i].Position, Quaternion.identity);
                     gameObject.transform.eulerAngles = DicCauldrons[i].Rotation;
@@ -179,10 +209,20 @@ namespace BazaarIsMyHaven
             float w_g = ModConfig.CauldronWhiteToGreenWeight.Value;
             float g_r = ModConfig.CauldronGreenToRedWeight.Value;
             float r_w = ModConfig.CauldronRedToWhiteWeight.Value;
+
+            // Treat negative weights as disabled.
+            if (w_g < 0) w_g = 0;
+            if (g_r < 0) g_r = 0;
+            if (r_w < 0) r_w = 0;
+
             float total = w_g + g_r + r_w;
+            // No cauldron type is enabled when all weights are zero.
+            if (total == 0)
+                return default;
+
             double d = RNG.NextDouble() * total;
-            if (d <= w_g) return LunarCauldronsCode[0];
-            else if (d <= w_g + g_r) return LunarCauldronsCode[1];
+            if (d < w_g) return LunarCauldronsCode[0];
+            else if (d < w_g + g_r) return LunarCauldronsCode[1];
             else { return LunarCauldronsCode[2]; }
         }
     }
