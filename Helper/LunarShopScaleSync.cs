@@ -25,6 +25,7 @@ namespace BazaarIsMyHaven
         {
             //This prefab as a built in prefrab scale of 1. We are attempting to use it as a helper to set the scale of the shops for clients.
             //It has no attachment point or pickup offset, so it will unparent the shops and set their scale to exactly 1.
+            //RPCParentToMuzzle function from ItemShareController will help facilitate this
             helperPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/Drifter/DrifterHoard.prefab");
         }
 
@@ -165,7 +166,7 @@ namespace BazaarIsMyHaven
         {
             var scaleWriter = new NetworkWriter();
             scaleWriter.StartMessage(MsgType.Rpc);
-            scaleWriter.WritePackedUInt32(unchecked((uint)ItemShareController.kRpcRpcParentToMuzzle));
+            scaleWriter.WritePackedUInt32(unchecked((uint)ItemShareController.kRpcRpcParentToMuzzle)); //The Scale Fix is here
             scaleWriter.Write(helperId);
             scaleWriter.Write(shop.netId);
             scaleWriter.FinishMessage();

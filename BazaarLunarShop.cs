@@ -19,7 +19,7 @@ namespace BazaarIsMyHaven
     public class BazaarLunarShop : BazaarBase
     {
         //Give the Shop a name, useful for QoLChest's blacklisting feature, to prevent the shops from dissapearing
-        //and interfering with rerolling and other features.
+        //and interfering with rerolling and instancing. Clients even with QolChest wouldn't have their shops dissapear anyways.
         private const string LunarShopObjectName = "LunarShopTerminal_WeebsCustom";
 
         AsyncOperationHandle<GameObject> lunarShopBud;
