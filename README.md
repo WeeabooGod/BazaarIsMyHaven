@@ -27,7 +27,7 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
     - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
     - Queued update system allows slow clients to process messages without causing mismatches.
 
-This was my own summarization of what I understand. Me, the human. I am a goblin with no cooperation experience in creating git commits. My gits will be as bad as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
+This was my own summarization of what I understand. Me, the human. I am a goblin with no experience in creating git commits. I usually never share my work, my commits will be as horrible as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
 
 ---
 **AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
