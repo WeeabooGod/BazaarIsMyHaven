@@ -13,25 +13,25 @@ using UnityEngine.SceneManagement;
 
 namespace BazaarIsMyHaven
 {
-    // RoR2 Gameobject creation uses original prefab scale, this causes scale to be set host-wide, but not client wide. I am trying to fix this.
-    // Host-only bookkeeping. Clients receive existing RoR2 messages, not this component.
+    // Host-Only Bookeeping for lunar shops. Compatible clients receive a direct scale message; other clients use the vanilla RPC fallback.
     public class LunarShopScaleSync : MonoBehaviour
     {
         private static AsyncOperationHandle<GameObject> helperPrefab;
         private readonly List<NetworkIdentity> shops = new List<NetworkIdentity>();
         private readonly HashSet<NetworkConnection> synchronizedClients = new HashSet<NetworkConnection>();
+        private bool fallbackUnavailable;
 
         public static void Preload()
         {
-            //This prefab as a built in prefrab scale of 1. We are attempting to use it as a helper to set the scale of the shops for clients.
-            //It has no attachment point or pickup offset, so it will unparent the shops and set their scale to exactly 1.
-            //RPCParentToMuzzle function from ItemShareController will help facilitate this
+            // Only the fallback uses this prefab. Its RPC unparents a shop and sets scale to 1.
+            // RPCParentToMuzzle function from ItemShareController will help facilitate this
+            // No helper is spawned when every remote client supports direct scale messages.
             helperPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/Drifter/DrifterHoard.prefab");
         }
 
         public static void Apply(List<GameObject> shopObjects)
         {
-            if (!NetworkServer.active || shopObjects.Count == 0)
+            if (!NetworkServer.active || !ModConfig.EnableMod.Value || !ModConfig.LunarShopSectionEnabled.Value || shopObjects.Count == 0)
             {
                 return;
             }
@@ -55,7 +55,7 @@ namespace BazaarIsMyHaven
             var retryDelay = new WaitForSecondsRealtime(1f);
 
             // Scene loading and late joins can make clients ready after the shops are created.
-            // Observers have already been sent the spawn messages needed by our RPC.
+            // Observers have already been sent the spawn messages needed by either scale path.
             while (NetworkServer.active)
             {
                 shops.RemoveAll(shop => !shop);
@@ -100,6 +100,17 @@ namespace BazaarIsMyHaven
                     continue;
                 }
 
+                // Wait for the connection handshake before deciding which path this client needs.
+                if (!BazaarClientNetworking.TryGetScaleMessageId(connection, out short messageId))
+                {
+                    continue;
+                }
+
+                if (messageId == 0 && fallbackUnavailable)
+                {
+                    continue;
+                }
+
                 if (shops.All(shop => shop.observers != null && shop.observers.Contains(connection)))
                 {
                     result.Add(connection);
@@ -111,10 +122,104 @@ namespace BazaarIsMyHaven
 
         private bool SendScaleUpdates(List<NetworkConnection> clients)
         {
+            var fallbackClients = new List<NetworkConnection>();
+            bool allSent = true;
+
+            foreach (var connection in clients)
+            {
+                if (!BazaarClientNetworking.TryGetScaleMessageId(connection, out short messageId))
+                {
+                    allSent = false;
+                    continue;
+                }
+
+                if (messageId == 0)
+                {
+                    fallbackClients.Add(connection);
+                    continue;
+                }
+
+                bool sent = true;
+                foreach (var shop in shops)
+                {
+                    if (!BazaarClientNetworking.SendScale(connection, messageId, shop))
+                    {
+                        sent = false;
+                    }
+                }
+
+                if (sent)
+                {
+                    synchronizedClients.Add(connection);
+                    Log.LogDebug($"Sent direct scale updates for {shops.Count} lunar shops to connection {connection.connectionId}.");
+                }
+                else
+                {
+                    allSent = false;
+                    Log.LogWarning($"Could not send direct lunar shop scales to connection {connection.connectionId}; retrying.");
+                }
+            }
+
+            if (fallbackClients.Count > 0) //Fallback using workaround for syncing scale without client having the mod
+            {
+                try
+                {
+                    if (!SendFallbackScaleUpdates(fallbackClients))
+                    {
+                        allSent = false;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    // A changed or missing fallback prefab must not stop direct updates for later joins.
+                    fallbackUnavailable = true;
+                    Log.LogError($"Lunar shop scale fallback failed; direct client support remains active: {exception}");
+                }
+            }
+
+            return allSent;
+        }
+
+        internal static void ReceiveScale(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection)
+        {
+            Main.instance.StartCoroutine(ApplyScaleWhenSpawned(shopId, scale, connection));
+        }
+
+        private static IEnumerator ApplyScaleWhenSpawned(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection)
+        {
+            int sceneHandle = SceneManager.GetActiveScene().handle;
+            float deadline = Time.realtimeSinceStartup + 10f;
+
+            // A scale message can arrive before Unity has finished creating its target object.
+            // Do not retain it after a scene change, disconnect, or prolonged missing spawn.
+            while (NetworkClient.active && ClientScene.readyConnection == connection
+                && SceneManager.GetActiveScene().handle == sceneHandle && Time.realtimeSinceStartup < deadline)
+            {
+                var shop = ClientScene.FindLocalObject(shopId);
+                if (shop)
+                {
+                    if (shop.GetComponent<ShopTerminalBehavior>() && shop.GetComponent<PurchaseInteraction>())
+                    {
+                        shop.transform.SetParent(null, true);
+                        shop.transform.localScale = scale;
+                        Log.LogDebug($"Applied direct lunar shop scale {scale} to object {shopId}.");
+                    }
+
+                    yield break;
+                }
+
+                yield return null;
+            }
+
+            Log.LogDebug($"Discarded lunar shop scale update for missing object {shopId}.");
+        }
+
+        private bool SendFallbackScaleUpdates(List<NetworkConnection> clients)
+        {
             var prefab = helperPrefab.WaitForCompletion();
             var itemShare = prefab ? prefab.GetComponent<ItemShareController>() : null;
 
-            // This prefab has no attachment point or pickup offset. It is said to unparent the target and sets its root scale to exactly 1.
+            // An attachment point or offset would change the position assumed by our fallback.
             if (!itemShare || itemShare.pickupMuzzle || !string.IsNullOrEmpty(itemShare.pickupMuzzleChildName) || itemShare.subsequentPickupLocalOffset != Vector3.zero)
             {
                 throw new InvalidOperationException("DrifterHoard no longer has the expected scale-helper settings.");
@@ -131,7 +236,7 @@ namespace BazaarIsMyHaven
                 NetworkServer.Spawn(helper);
 
                 var helperIdentity = helper.GetComponent<NetworkIdentity>();
-                var messages = shops.Select(shop => CreateScaleMessages(helperIdentity.netId, shop)).ToArray();
+                var messages = shops.Select(shop => CreateFallbackScaleMessages(helperIdentity.netId, shop)).ToArray();
 
                 foreach (var connection in clients)
                 {
@@ -144,7 +249,7 @@ namespace BazaarIsMyHaven
                     if (sent)
                     {
                         synchronizedClients.Add(connection);
-                        Log.LogDebug($"Set {shops.Count} lunar shops to scale 1 for connection {connection.connectionId}.");
+                        Log.LogDebug($"Used the vanilla RPC fallback to set {shops.Count} lunar shops to scale 1 for connection {connection.connectionId}.");
                     }
                     else
                     {
@@ -162,7 +267,7 @@ namespace BazaarIsMyHaven
             return allSent;
         }
 
-        private static byte[] CreateScaleMessages(NetworkInstanceId helperId, NetworkIdentity shop)
+        private static byte[] CreateFallbackScaleMessages(NetworkInstanceId helperId, NetworkIdentity shop)
         {
             var scaleWriter = new NetworkWriter();
             scaleWriter.StartMessage(MsgType.Rpc);

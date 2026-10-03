@@ -695,7 +695,7 @@ namespace BazaarIsMyHaven
                 //Main.instance.StartCoroutine(DelayRerollEffect(shopTerminalBehavior, 0.1f, false));
             }
 
-            // Both prefab choices use the same scale, regardless of purchase instancing.
+            // Compatible clients will recieve scale updates directly, clients without mod will use RPC fallback.
             LunarShopScaleSync.Apply(gameObjects);
         }
     }

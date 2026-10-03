@@ -88,6 +88,9 @@ namespace BazaarIsMyHaven
                 bazaarMod.Hook();
             }
 
+            // Hook optional client support regardless of client settings
+            // Host is authoritive on the creation of lunar shops and if networked updates are required
+            BazaarClientNetworking.Hook();
             InstancedPurchases.Hook();
 
             On.RoR2.Run.Start += Run_Start;
