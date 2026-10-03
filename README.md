@@ -18,20 +18,19 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
       - Instancing also did not mesh well with re-rolling
   - Buds make a return, now you can have more than 5 buds with Shop features.
 
-- **Reworked Features**
+- **Reworked Features and Added Changes**
   - Instancing was reworked to include extra states, a queue, and additional bookkeeping for use for re-rolling.
       - When instance purchases was on, various buggy interactions could happen. Host could buy an item, and clients would receive nothing on the same item. Re-roll would re-roll items already purchased from clients. Host was largely authoritative over tracking purchases.
-  ~Added Changes
-    - Correct buyer states; purchases temporarily use the buyer's shop data then restores the host's view.
-        - Instances also track for states to protect re-roll, and swapped equipment
-              - Old re-roll path called normal shop-generation. We can now skip purchased shops and have various states to ensure each instance client gets only what should be re-rolled. 
-    - broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability,.
-    - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
-    - Queued update system allows slow clients to process messages without causing mismatches.
+  - Correct buyer states; purchases temporarily use the buyer's shop data then restores the host's view.
+      - Instances also track for states to protect re-roll, and swapped equipment
+          - Old re-roll path called normal shop-generation. We can now skip purchased shops and have various states to ensure each instance client gets only what should be re-rolled. 
+  - broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability,.
+  - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
+  - Queued update system allows slow clients to process messages without causing mismatches.
 
-  - **New Features**
-    - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will not have the cost.
-    - Technically discussed earlier, but a proper client side syncing is available for clients who have the mod installed. Offers a much more reliable, and cleaner way to adjust model size and corrections without having to resort to workarounds.
+- **New Features**
+  - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will not have the cost.
+  - Technically discussed earlier, but a proper client side syncing is available for clients who have the mod installed. Offers a much more reliable, and cleaner way to adjust model size and corrections without having to resort to workarounds.
 
 This was my own summarization of what I understand. Me, the human. I am a goblin with no experience in creating git commits. I usually never share my work, my commits will be as horrible as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
 
