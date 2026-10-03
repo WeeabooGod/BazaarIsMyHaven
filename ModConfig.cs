@@ -118,8 +118,17 @@ namespace BazaarIsMyHaven
         public static ConfigEntry<bool> WanderingChefCraftableRecipesOnly;
         public static ConfigEntry<bool> WanderingChefBuyToInventory;
 
+        private const string itemTiersString = "Tier1 | Tier2 | Tier3 | Lunar | Boss | VoidTier1 | VoidTier2 | VoidTier3 | VoidBoss | FoodTier";
+        private const string itemKeyWordsExplanation = $"Can use:\n - internal item names(see https://risk-of-thunder.github.io/R2Wiki/Mod-Creation/Developer-Reference/Items-and-Equipments-Data/)\n- item tier keywords ({itemTiersString})\n- droptable names (see README.md)\nFollows ItemStringParser format.";
+
+        private static bool initialized;
+        private static bool reloading;
+
         public static void InitConfig(ConfigFile config)
         {
+            if (initialized)
+                return;
+
             // 00 General
             EnableMod = config.Bind("00 General", "Enabled", true, "Enable Mod");
             AlwaysSpawnShopPortal = config.Bind("00 General", "AlwaysSpawnShopPortal", false, "Spawn a portal to the Bazaar after each teleporter event.");
@@ -171,8 +180,6 @@ namespace BazaarIsMyHaven
             EquipmentInstancedPurchases = config.Bind("05 Equipment", "InstancedPurchases", true, "Each player can purchase equipment independently.");
             EquipmentCost = config.Bind("05 Equipment", "Cost", 0, "Monetary cost for equipment purchases.");
             EquipmentBuyToInventory = config.Bind("05 Equipment", "BuyToInventory", true, "Purchased equipment goes directly into inventory instead of dropping to the ground.");
-            if (EquipmentAmount.Value > 3 && !EquipmentReplaceLunarSeersWithEquipment.Value) EquipmentAmount.Value = 3;
-            if (EquipmentAmount.Value > 5 && EquipmentReplaceLunarSeersWithEquipment.Value) EquipmentAmount.Value = 5;
 
             // 06 LunarShop
             LunarShopSectionEnabled = config.Bind("06 LunarShop", "SectionEnabled", true, "Enables or disables the Lunar Shop section.");
@@ -182,50 +189,10 @@ namespace BazaarIsMyHaven
             LunarShopBuyLimit = config.Bind("06 LunarShop", "BuyLimit", 5, "Limit on Lunar Shop purchases each player can make per visit to the Bazaar. -1 = Unlimited.");
             LunarShopSequentialItems = config.Bind("06 LunarShop", "SequentialItems", false, "Picks items sequentially from the list instead of randomly.");
             var items = "Tonic | AutoCastEquipment | RandomDamageZone | LunarDagger | HalfSpeedDoubleHealth | ShieldOnly | ShieldOnly | ShieldOnly | LunarPrimaryReplacement | LunarSecondaryReplacement | LunarSpecialReplacement | LunarBadLuck | LunarBadLuck | LunarBadLuck | LunarSun | HalfAttackSpeedHalfCooldowns | HalfAttackSpeedHalfCooldowns";
-            var itemTiersString = "Tier1 | Tier2 | Tier3 | Lunar | Boss | VoidTier1 | VoidTier2 | VoidTier3 | VoidBoss | FoodTier";
-            var itemKeyWordsExplanation = $"Can use:\n - internal item names(see https://risk-of-thunder.github.io/R2Wiki/Mod-Creation/Developer-Reference/Items-and-Equipments-Data/)\n- item tier keywords ({itemTiersString})\n- droptable names (see README.md)\nFollows ItemStringParser format.";
             LunarShopItemList = config.Bind("06 LunarShop", "ItemList", "dtLunarChest", $"List of items available in Lunar Shop. {itemKeyWordsExplanation} Example: {items}");
             LunarShopInstancedPurchases = config.Bind("06 LunarShop", "InstancedPurchases", true, "Each player can buy independently from Lunar Shop.");
             LunarShopBuyToInventory = config.Bind("06 LunarShop", "BuyToInventory", true, "Items go directly into inventory instead of dropping on ground.");
             LunarShopAmountDependingOnCharacter = config.Bind("06 LunarShop", "AmountDependingOnCharacter", "", "Change the amount of available shop terminals depending on the current Character. Requires ReplaceLunarBudsWithTerminals and InstancedPurchases to work. Also the value cannot be larger than Amount. Comma-separated list in the format <characterBody|survivorName>=<amount>.\nExample: Seeker=15, FalseSon=16");
-            EventHandler updateConfig = static (sender, args) =>
-            {
-                LunarShopAmountDependingOnCharacterParsed.Clear();
-                if (!string.IsNullOrWhiteSpace(LunarShopAmountDependingOnCharacter.Value))
-                {
-                    string[] characterStrings = LunarShopAmountDependingOnCharacter.Value.Split(",");
-                    foreach (string characterString in characterStrings)
-                    {
-                        var nameAmountStr = characterString.Split("=");
-                        if (nameAmountStr.Length != 2) {
-                            Log.LogWarning($"Could not parse character string {characterString} for AmountDependingOnCharacter");
-                            continue;
-                        }
-                        var name = nameAmountStr[0].Trim();
-                        var amountStr = nameAmountStr[1].Trim();
-                        if(int.TryParse(amountStr, out var amount))
-                        {
-                            if (string.IsNullOrWhiteSpace(name)) {
-                                Log.LogWarning($"Could not parse character string name in {characterString} for AmountDependingOnCharacter");
-                                continue;
-                            }
-                            BodyIndex bodyIndex = CatalogHelper.FindBody(name);
-                            if (bodyIndex == BodyIndex.None)
-                            {
-                                Log.LogError($"AmountDependingOnCharacter: Could not find body or survivor: {name}");
-                                continue;
-                            }
-                            LunarShopAmountDependingOnCharacterParsed[bodyIndex] = amount;
-                        }
-                        else
-                        {
-                            Log.LogWarning($"Could not parse character string amount {amountStr} in {characterString} for AmountDependingOnCharacter");
-                        }
-                    }
-                }
-            };
-            LunarShopAmountDependingOnCharacter.SettingChanged += updateConfig;
-            updateConfig.Invoke(null, null);
 
             // Recycler settings share the Lunar Shop section and its SectionEnabled switch.
             LunarRecyclerAvailable = config.Bind("06 LunarShop", "LunarRecyclerAvailable", true, "If enabled, a Lunar Recycler is available in the Bazaar. Otherwise it will get removed.");
@@ -267,6 +234,105 @@ namespace BazaarIsMyHaven
             // string[] bodyNames = BodyCatalog.allBodyPrefabs.Select(prefab => prefab.name).ToArray();
             DonateRewardListAvailableCharacters = config.Bind("11 Donate", "RewardListAvailableCharacters", string.Join(", ", survivorNames), "Available special reward lists for certain characters. Applies only if the donator is a character of the respective type. Comma-separated list of characters (see README.md)");
             
+            // 12 Wandering Chef
+            WanderingChefSectionEnabled = config.Bind("12 WanderingChef", "SectionEnabled", true, "Enables or disables the Wandering Chef section. Enabling spawns a Wandering Chef near the Lunar Shop.");
+            WanderingChefUnrestrictedCrafting = config.Bind("12 WanderingChef", "UnrestrictedCrafting", false, "Allows you to craft anything. Otherwise crafting is restricted to a single randomly selected target pickup.");
+            WanderingChefCraftableRecipesOnly = config.Bind("12 WanderingChef", "CraftableRecipesOnly", true, "Only if UnrestrictedCrafting is false: Select a recipe based on available ingredients in the bazaar and the players current inventory.");
+            WanderingChefBuyToInventory = config.Bind("12 WanderingChef", "BuyToInventory", true, "Items go directly into inventory instead of dropping on ground.");
+
+            RefreshDerivedData(config);
+
+            // Register once; in-game edits can refresh these lists immediately.
+            LunarShopAmountDependingOnCharacter.SettingChanged += LunarShopCharacterAmountsChanged;
+            DonateRewardListAvailableCharacters.SettingChanged += DonationCharactersChanged;
+            initialized = true;
+
+            if (ModCompatibilityInLobbyConfig.enabled)
+            {
+                ModCompatibilityInLobbyConfig.CreateFromBepInExConfigFile(config, Main.PluginName);
+            }
+        }
+
+        //Read Entire Config to rebuild dependent list or writing newly bound reward entires
+        public static void ReloadConfig(ConfigFile config)
+        {
+            bool saveOnConfigSet = config.SaveOnConfigSet;
+            reloading = true;
+            try
+            {
+                // Reload changes entries one at a time.
+                config.SaveOnConfigSet = false;
+                config.Reload();
+            }
+            finally
+            {
+                config.SaveOnConfigSet = saveOnConfigSet;
+                reloading = false;
+            }
+
+            RefreshDerivedData(config);
+        }
+
+        private static void RefreshDerivedData(ConfigFile config)
+        {
+            if (EquipmentAmount.Value > 3 && !EquipmentReplaceLunarSeersWithEquipment.Value) EquipmentAmount.Value = 3;
+            if (EquipmentAmount.Value > 5 && EquipmentReplaceLunarSeersWithEquipment.Value) EquipmentAmount.Value = 5;
+
+            RefreshLunarShopCharacterAmounts();
+            RefreshDonationRewardLists(config);
+        }
+
+        private static void LunarShopCharacterAmountsChanged(object sender, EventArgs args)
+        {
+            if (!reloading)
+                RefreshLunarShopCharacterAmounts();
+        }
+
+        private static void DonationCharactersChanged(object sender, EventArgs args)
+        {
+            if (!reloading)
+                RefreshDonationRewardLists(DonateRewardListAvailableCharacters.ConfigFile);
+        }
+
+        private static void RefreshLunarShopCharacterAmounts()
+        {
+            LunarShopAmountDependingOnCharacterParsed.Clear();
+            if (!string.IsNullOrWhiteSpace(LunarShopAmountDependingOnCharacter.Value))
+            {
+                string[] characterStrings = LunarShopAmountDependingOnCharacter.Value.Split(",");
+                foreach (string characterString in characterStrings)
+                {
+                    var nameAmountStr = characterString.Split("=");
+                    if (nameAmountStr.Length != 2) {
+                        Log.LogWarning($"Could not parse character string {characterString} for AmountDependingOnCharacter");
+                        continue;
+                    }
+                    var name = nameAmountStr[0].Trim();
+                    var amountStr = nameAmountStr[1].Trim();
+                    if(int.TryParse(amountStr, out var amount))
+                    {
+                        if (string.IsNullOrWhiteSpace(name)) {
+                            Log.LogWarning($"Could not parse character string name in {characterString} for AmountDependingOnCharacter");
+                            continue;
+                        }
+                        BodyIndex bodyIndex = CatalogHelper.FindBody(name);
+                        if (bodyIndex == BodyIndex.None)
+                        {
+                            Log.LogError($"AmountDependingOnCharacter: Could not find body or survivor: {name}");
+                            continue;
+                        }
+                        LunarShopAmountDependingOnCharacterParsed[bodyIndex] = amount;
+                    }
+                    else
+                    {
+                        Log.LogWarning($"Could not parse character string amount {amountStr} in {characterString} for AmountDependingOnCharacter");
+                    }
+                }
+            }
+        }
+
+        private static void RefreshDonationRewardLists(ConfigFile config)
+        {
             DonateRewardListCharacters.Clear();
             string[] availableCharacters = DonateRewardListAvailableCharacters.Value.Split(",");
             foreach (string availableCharacter in availableCharacters)
@@ -345,20 +411,10 @@ namespace BazaarIsMyHaven
                         break;
                 }   
                 ConfigEntry<string> donateRewardListCharacter = config.Bind("11 Donate", $"RewardList{name}", defaultReward, $"Item reward pool for {name} in the format <amount1>x<item1> & <amount2>x<item2>. See README.md for more detailed description. {itemKeyWordsExplanation}");
-                DonateRewardListCharacters.Add(bodyIndex, donateRewardListCharacter);
-            }
-
-            // 12 Wandering Chef
-            WanderingChefSectionEnabled = config.Bind("12 WanderingChef", "SectionEnabled", true, "Enables or disables the Wandering Chef section. Enabling spawns a Wandering Chef near the Lunar Shop.");
-            WanderingChefUnrestrictedCrafting = config.Bind("12 WanderingChef", "UnrestrictedCrafting", false, "Allows you to craft anything. Otherwise crafting is restricted to a single randomly selected target pickup.");
-            WanderingChefCraftableRecipesOnly = config.Bind("12 WanderingChef", "CraftableRecipesOnly", true, "Only if UnrestrictedCrafting is false: Select a recipe based on available ingredients in the bazaar and the players current inventory.");
-            WanderingChefBuyToInventory = config.Bind("12 WanderingChef", "BuyToInventory", true, "Items go directly into inventory instead of dropping on ground.");
-
-            if (ModCompatibilityInLobbyConfig.enabled)
-            {
-                ModCompatibilityInLobbyConfig.CreateFromBepInExConfigFile(config, Main.PluginName);
+                DonateRewardListCharacters[bodyIndex] = donateRewardListCharacter;
             }
         }
+
     }
 
 }

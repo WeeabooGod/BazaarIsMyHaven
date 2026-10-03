@@ -19,7 +19,7 @@ namespace BazaarIsMyHaven
 {
     [BepInDependency(R2API.R2API.PluginGUID)]
     [BepInDependency(R2API.LanguageAPI.PluginGUID)]
-    [BepInDependency("Faust.QoLChest", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("Faust.QoLChests", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.KingEnderBrine.InLobbyConfig", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.funkfrog_sipondo.sharesuite", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(ItemStringParser.ItemStringParser.PluginGUID)]
@@ -37,6 +37,7 @@ namespace BazaarIsMyHaven
         public const string PluginVersion = "4.2.0";
 
         private static System.Random Random = new System.Random();
+        private static readonly Dictionary<(Type type, string address), AsyncOperationHandle> debugAssets = new Dictionary<(Type, string), AsyncOperationHandle>();
         List<BazaarBase> bazaarMods = new List<BazaarBase>();
         private readonly Dictionary<PlayerCharacterMasterController, PlayerStruct> playerStructs_ = new Dictionary<PlayerCharacterMasterController, PlayerStruct>();
         public AsyncOperationHandle<GameObject> pickupTakenOrbPrefab;
@@ -74,9 +75,6 @@ namespace BazaarIsMyHaven
             RoR2Application.onLoad += () =>
             {
                 ModConfig.InitConfig(Config);
-#if DEBUG
-                ItemStringParser.ItemStringParser.WriteDropTablesMarkdownFile("Markdownfile.md");
-#endif
                 Hook();
             };
         }
@@ -94,6 +92,7 @@ namespace BazaarIsMyHaven
             InstancedPurchases.Hook();
 
             On.RoR2.Run.Start += Run_Start;
+            Run.onRunDestroyGlobal += Run_Destroy;
             On.RoR2.BazaarController.SetUpSeerStations += BazaarController_SetUpSeerStations;
             RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
             On.RoR2.TeleporterInteraction.Start += TeleporterInteraction_Start;
@@ -109,17 +108,28 @@ namespace BazaarIsMyHaven
 
             ShopKeeper.DiedAtLeastOnce = false;
             ShopKeeper.Body = null;
+            playerStructs_.Clear();
             orig(self);
-            if (ModConfig.EnableMod.Value && NetworkServer.active)
+            if (NetworkServer.active)
             {
                 //Allows the Config to be-reread without having to restart game on a new run without any other aditional mods
-                Config.Reload();
-			    ModConfig.InitConfig(Config);
+                ModConfig.ReloadConfig(Config);
                 
                 foreach (var bazaarMod in bazaarMods)
                 {
                     bazaarMod.RunStart();
                 }
+            }
+        }
+
+        private void Run_Destroy(Run run)
+        {
+            playerStructs_.Clear();
+            ShopKeeper.Body = null;
+            InstancedPurchases.currentInteractor = null;
+            foreach (var bazaarMod in bazaarMods)
+            {
+                bazaarMod.RunEnd();
             }
         }
 
@@ -165,11 +175,25 @@ namespace BazaarIsMyHaven
                     isEnableSacrifice = true;
                     RunArtifactManager.instance.SetArtifactEnabledServer(artifactDef, false);
                 }
-                foreach (var bazaarMod in bazaarMods)
+                try
                 {
-                    bazaarMod.SetupBazaar();
+                    foreach (var bazaarMod in bazaarMods)
+                    {
+                        try
+                        {
+                            bazaarMod.SetupBazaar();
+                        }
+                        catch (Exception exception)
+                        {
+                            Log.LogError($"Could not set up {bazaarMod.GetType().Name}: {exception}");
+                        }
+                    }
                 }
-                if (isEnableSacrifice) RunArtifactManager.instance.SetArtifactEnabledServer(artifactDef, true);
+                finally
+                {
+                    // Restore the run's artifact even if one section fails to spawn.
+                    if (isEnableSacrifice) RunArtifactManager.instance.SetArtifactEnabledServer(artifactDef, true);
+                }
             }
         }
 
@@ -183,7 +207,7 @@ namespace BazaarIsMyHaven
         }
         private void KickFromShop_FixedUpdate(On.EntityStates.NewtMonster.KickFromShop.orig_FixedUpdate orig, EntityStates.NewtMonster.KickFromShop self)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.NewtSectionEnabled.Value && ModConfig.NewtNoKickFromShop.Value && NetworkServer.active)
+            if (ModConfig.EnableMod.Value && ModConfig.NewtSectionEnabled.Value && ModConfig.NewtNoKickFromShop.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
                 if(!ShopKeeper.DiedAtLeastOnce)
                 {
@@ -256,9 +280,9 @@ namespace BazaarIsMyHaven
                         StartCoroutine(ShopWelcomeWord());
                     }
 
-                    if (ShopKeeper.Body is null) FindShopkeeper();
+                    if (!ShopKeeper.Body) FindShopkeeper();
 
-                    if (ModConfig.NewtDeathBehavior.Value != ShopKeeper.DeathState.Default)
+                    if (ShopKeeper.Body && ShopKeeper.Body.inventory && ModConfig.NewtDeathBehavior.Value != ShopKeeper.DeathState.Default)
                     {
                         ShopKeeper.Body.inventory.GiveItemPermanent(ItemCatalog.GetItemDef(ItemCatalog.FindItemIndex("ExtraLife")), 1000);
                         ShopKeeper.Body.inventory.GiveItemPermanent(ItemCatalog.GetItemDef(ItemCatalog.FindItemIndex("CutHp")), 200);
@@ -316,58 +340,7 @@ namespace BazaarIsMyHaven
             return SceneManager.GetActiveScene().name == "bazaar";
         }
 
-        [ConCommand(commandName = "spawn_card", flags = ConVarFlags.ExecuteOnServer, helpText = "生成实物")]
-        private static void Command_SpawnCard(ConCommandArgs args)
-        {
-            //Inventory inventory = args.sender?.master.inventory;
-            string name = args.GetArgString(0);
-            NetworkUser player = PlayerCharacterMasterController.instances[0].networkUser;
-            ChatHelper.Send($"name = {name}, DisplayName = {player.masterController.GetDisplayName()}");
-            Vector3 vector = player.GetCurrentBody().footPosition;
-
-            SpawnCard card = Addressables.LoadAssetAsync<SpawnCard>(name).WaitForCompletion();
-            DirectorPlacementRule pr2 = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct
-            };
-            GameObject obj = card.DoSpawn(vector, Quaternion.identity, new DirectorSpawnRequest(card, pr2, Run.instance.runRNG)).spawnedInstance;
-            obj.transform.eulerAngles = new Vector3(0.0f, 220f, 0.0f);
-        }
-        [ConCommand(commandName = "spawn_object", flags = ConVarFlags.ExecuteOnServer, helpText = "生成实体")]
-        private static void Command_GameObject(ConCommandArgs args)
-        {
-            //Inventory inventory = args.sender?.master.inventory;
-            string name = args.GetArgString(0);
-            NetworkUser player = PlayerCharacterMasterController.instances[0].networkUser;
-            ChatHelper.Send($"name = {name}, DisplayName = {player.masterController.GetDisplayName()}");
-            Vector3 vector = player.GetCurrentBody().footPosition;
-
-            GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(Addressables.LoadAssetAsync<GameObject>(name).WaitForCompletion(), vector, Quaternion.identity); ;
-            gameObject.transform.eulerAngles = new Vector3(0.0f, 220f, 0.0f);
-            NetworkServer.Spawn(gameObject);
-        }
-        [ConCommand(commandName = "play_effect", flags = ConVarFlags.ExecuteOnServer, helpText = "生成特效")]
-        private static void Command_PlayEffect(ConCommandArgs args)
-        {
-            string name = args.GetArgString(0);
-            NetworkUser player = PlayerCharacterMasterController.instances[0].networkUser;
-            Vector3 vector = player.GetCurrentBody().corePosition;
-
-            float scale = 1.0f;
-            var result = args.TryGetArgFloat(1);
-            if(result.HasValue)
-                scale = result.Value;
-            
-            EffectManager.SpawnEffect(Addressables.LoadAssetAsync<GameObject>(name).WaitForCompletion(), new EffectData()
-            {
-                origin = vector,
-                rotation = Quaternion.identity,
-                scale = scale,
-                color = Color.yellow
-            }, true);
-        }
-
-        [ConCommand(commandName = "next_chef_item", flags = ConVarFlags.ExecuteOnServer, helpText = "生成特效")]
+        [ConCommand(commandName = "next_chef_item", flags = ConVarFlags.ExecuteOnServer | ConVarFlags.SenderMustBeServer, helpText = "生成特效")]
         private static void Command_NextChefItem(ConCommandArgs args)
         {
             foreach (var bazaarMod in Main.instance.bazaarMods)
