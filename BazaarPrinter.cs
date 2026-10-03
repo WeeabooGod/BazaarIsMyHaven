@@ -37,11 +37,6 @@ namespace BazaarIsMyHaven
             On.RoR2.ShopTerminalBehavior.SetPickup += ShopTerminalBehavior_SetPickup;
         }
 
-        
-        public override void RunStart()
-        {
-
-        }
         public override void SetupBazaar()
         {
             if(ModConfig.PrinterSectionEnabled.Value)
@@ -58,32 +53,51 @@ namespace BazaarIsMyHaven
                 {
                     var nameWithoutDuplicatorPrefix = self.name.Substring("Duplicator".Length);
                     var endsWithItemTier = Enum.TryParse(nameWithoutDuplicatorPrefix, out ItemTier itemTier);
+                    if (nameWithoutDuplicatorPrefix == "Void") // ItemTier.Void does not exists
+                    {
+                        itemTier = ItemTier.NoTier;
+                        endsWithItemTier = true;
+                    }
+
                     if (endsWithItemTier)
                     {
                         WeightedSelection<List<PickupIndex>> weightedSelection = new WeightedSelection<List<PickupIndex>>();
+
+                        //Local function to help add choices while avoiding empty ones.
+                        void AddDropList(List<PickupIndex> drops)
+                        {
+                            if (drops.Count > 0)
+                                weightedSelection.AddChoice(drops, 25f);
+                        }
+
                         switch (itemTier)
                         {
                             case ItemTier.VoidTier1:
-                                weightedSelection.AddChoice(Run.instance.availableVoidTier1DropList, 25f);
+                                AddDropList(Run.instance.availableVoidTier1DropList);
                                 break;
                             case ItemTier.VoidTier2:
-                                weightedSelection.AddChoice(Run.instance.availableVoidTier2DropList, 25f);
+                                AddDropList(Run.instance.availableVoidTier2DropList);
                                 break;
                             case ItemTier.VoidTier3:
-                                weightedSelection.AddChoice(Run.instance.availableVoidTier3DropList, 25f);
+                                AddDropList(Run.instance.availableVoidTier3DropList);
                                 break;
                             case ItemTier.VoidBoss:
-                                weightedSelection.AddChoice(Run.instance.availableVoidBossDropList, 25f);
+                                AddDropList(Run.instance.availableVoidBossDropList);
                                 break;
                             case ItemTier.NoTier:
-                                weightedSelection.AddChoice(Run.instance.availableVoidTier1DropList, 25f);
-                                weightedSelection.AddChoice(Run.instance.availableVoidTier2DropList, 25f);
-                                weightedSelection.AddChoice(Run.instance.availableVoidTier3DropList, 25f);
-                                weightedSelection.AddChoice(Run.instance.availableVoidBossDropList, 25f);
+                                AddDropList(Run.instance.availableVoidTier1DropList);
+                                AddDropList(Run.instance.availableVoidTier2DropList);
+                                AddDropList(Run.instance.availableVoidTier3DropList);
+                                AddDropList(Run.instance.availableVoidBossDropList);
                                 break;
                         }
-                        List<PickupIndex> list = weightedSelection.Evaluate(UnityEngine.Random.value);
-                        newPickup.pickupIndex = list[UnityEngine.Random.Range(0, list.Count)];
+
+                        //Handle having no eligible pool
+                        if (weightedSelection.Count > 0)
+                        {
+                            List<PickupIndex> list = weightedSelection.Evaluate(UnityEngine.Random.value);
+                            newPickup.pickupIndex = list[UnityEngine.Random.Range(0, list.Count)];
+                        }
                     }
                 }
             }
@@ -103,7 +117,11 @@ namespace BazaarIsMyHaven
                     count = ModConfig.PrinterAmount.Value;
                 for (int i = 0; i < count; i++)
                 {
-                    var tier = GetRandomPrinterTier();
+                    if (!TryGetRandomPrinterTier(out var tier))
+                    {
+                        Log.LogWarning("No available printer tiers have a valid positive weight; skipping printers.");
+                        break;
+                    }
                     SpawnCard spawnCard = null;
                     string nonDefaultName = null;
                     switch (tier)
@@ -133,6 +151,8 @@ namespace BazaarIsMyHaven
                             break;
                     }
                     GameObject printer = spawnCard.DoSpawn(DicPrinters[i].Position, Quaternion.identity, new DirectorSpawnRequest(spawnCard, DirectPlacement, Run.instance.runRNG)).spawnedInstance;
+                    if (!printer)
+                        continue;
                     if (nonDefaultName != null)
                         printer.name = nonDefaultName;
                     printer.transform.eulerAngles = DicPrinters[i].Rotation;
@@ -161,20 +181,35 @@ namespace BazaarIsMyHaven
             DicPrinters.Add(random[8], new SpawnCardStruct(new Vector3(-146f, -25.3f, -16.0f), new Vector3(0.0f, 100.0f, 0.0f)));
         }
 
-        private ItemTier GetRandomPrinterTier()
+        private bool TryGetRandomPrinterTier(out ItemTier tier)
         {
             WeightedSelection<ItemTier> weightedSelection = new WeightedSelection<ItemTier>();
-            weightedSelection.AddChoice(ItemTier.Tier1, ModConfig.PrinterTier1Weight.Value);
-            weightedSelection.AddChoice(ItemTier.Tier2, ModConfig.PrinterTier2Weight.Value);
-            weightedSelection.AddChoice(ItemTier.Tier3, ModConfig.PrinterTier3Weight.Value);
-            weightedSelection.AddChoice(ItemTier.Boss, ModConfig.PrinterTierBossWeight.Value);
-            weightedSelection.AddChoice(ItemTier.VoidTier1, ModConfig.PrinterTierVoid1Weight.Value);
-            weightedSelection.AddChoice(ItemTier.VoidTier2, ModConfig.PrinterTierVoid2Weight.Value);
-            weightedSelection.AddChoice(ItemTier.VoidTier3, ModConfig.PrinterTierVoid3Weight.Value);
-            weightedSelection.AddChoice(ItemTier.VoidBoss, ModConfig.PrinterTierVoidBossWeight.Value);
-            weightedSelection.AddChoice(ItemTier.NoTier, ModConfig.PrinterTierVoidAnyWeight.Value);
-            var tier = weightedSelection.Evaluate(UnityEngine.Random.value);
-            return tier;
+
+            //Same localized function to help manage no eights and counts and avoid empty choices.
+            void AddTier(ItemTier choice, float weight, int availableCount)
+            {
+                if (availableCount > 0 && weight > 0)
+                    weightedSelection.AddChoice(choice, weight);
+            }
+
+            AddTier(ItemTier.Tier1, ModConfig.PrinterTier1Weight.Value, Run.instance.availableTier1DropList.Count);
+            AddTier(ItemTier.Tier2, ModConfig.PrinterTier2Weight.Value, Run.instance.availableTier2DropList.Count);
+            AddTier(ItemTier.Tier3, ModConfig.PrinterTier3Weight.Value, Run.instance.availableTier3DropList.Count);
+            AddTier(ItemTier.Boss, ModConfig.PrinterTierBossWeight.Value, Run.instance.availableBossDropList.Count);
+            AddTier(ItemTier.VoidTier1, ModConfig.PrinterTierVoid1Weight.Value, Run.instance.availableVoidTier1DropList.Count);
+            AddTier(ItemTier.VoidTier2, ModConfig.PrinterTierVoid2Weight.Value, Run.instance.availableVoidTier2DropList.Count);
+            AddTier(ItemTier.VoidTier3, ModConfig.PrinterTierVoid3Weight.Value, Run.instance.availableVoidTier3DropList.Count);
+            AddTier(ItemTier.VoidBoss, ModConfig.PrinterTierVoidBossWeight.Value, Run.instance.availableVoidBossDropList.Count);
+            int voidCount = Run.instance.availableVoidTier1DropList.Count + Run.instance.availableVoidTier2DropList.Count +
+                Run.instance.availableVoidTier3DropList.Count + Run.instance.availableVoidBossDropList.Count;
+            AddTier(ItemTier.NoTier, ModConfig.PrinterTierVoidAnyWeight.Value, voidCount);
+
+            tier = ItemTier.NoTier;
+            if (weightedSelection.Count == 0)
+                return false;
+
+            tier = weightedSelection.Evaluate(UnityEngine.Random.value);
+            return true;
         }
     }
 }
