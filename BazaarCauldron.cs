@@ -216,6 +216,7 @@ namespace BazaarIsMyHaven
             if (r_w < 0) r_w = 0;
 
             float total = w_g + g_r + r_w;
+
             // No cauldron type is enabled when all weights are zero.
             if (total == 0)
                 return default;

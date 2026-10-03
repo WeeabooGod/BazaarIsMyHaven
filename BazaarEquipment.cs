@@ -32,10 +32,6 @@ namespace BazaarIsMyHaven
             On.RoR2.ShopTerminalBehavior.DropPickup += ShopTerminalBehavior_DropPickup;
             On.RoR2.ShopTerminalBehavior.GenerateNewPickupServer_bool += ShopTerminalBehavior_GenerateNewPickupServer_bool;
         }
-        public override void RunStart()
-        {
-
-        }
 
         public override void SetupBazaar()
         {
@@ -66,7 +62,9 @@ namespace BazaarIsMyHaven
             {
                 if (self.name.StartsWith("MultiShopEquipmentTerminal"))
                 {
-                    var playerCharacterMasterController = activator.GetComponent<CharacterBody>().master.playerCharacterMasterController;
+                    var body = activator ? activator.GetComponent<CharacterBody>() : null;
+                    var playerCharacterMasterController = body && body.master ? body.master.playerCharacterMasterController : null;
+                    var previousActivator = currentActivator;
                     try { 
                         currentActivator = playerCharacterMasterController;
                         orig(self, activator);
@@ -74,7 +72,7 @@ namespace BazaarIsMyHaven
                     }
                     finally
                     {
-                        currentActivator = null;
+                        currentActivator = previousActivator;
                     }
                 }
             }
@@ -86,21 +84,24 @@ namespace BazaarIsMyHaven
             if (ModConfig.EnableMod.Value && ModConfig.EquipmentSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active && self.name.StartsWith("MultiShopEquipmentTerminal"))
             {
                 if(ModConfig.EquipmentBuyToInventory.Value) { 
-                    var body = currentActivator.master.GetBody();
-                    if (body != null)
+                    var body = currentActivator && currentActivator.master ? currentActivator.master.GetBody() : null;
+                    if (!body || !body.inventory)
                     {
-                        var droppedEquipment = Helper.GivePickup(body, self.CurrentPickup().pickupIndex, self.transform.position, false);
-                        if(droppedEquipment != EquipmentIndex.None)
-                        {
-                            self.SetPickup(new UniquePickup(PickupCatalog.FindPickupIndex(droppedEquipment)));
-                            var purchaseInteraction = self.GetComponent<PurchaseInteraction>();
-                            purchaseInteraction.SetAvailable(true);
-                        }
-                        else
-                        {
-                            self.SetHasBeenPurchased(newHasBeenPurchased: true);
-                            self.SetNoPickup();
-                        }
+                        orig(self);
+                        return;
+                    }
+
+                    var droppedEquipment = Helper.GivePickup(body, self.CurrentPickup().pickupIndex, self.transform.position, false);
+                    if(droppedEquipment != EquipmentIndex.None)
+                    {
+                        self.SetPickup(new UniquePickup(PickupCatalog.FindPickupIndex(droppedEquipment)));
+                        var purchaseInteraction = self.GetComponent<PurchaseInteraction>();
+                        purchaseInteraction.SetAvailable(true);
+                    }
+                    else
+                    {
+                        self.SetHasBeenPurchased(newHasBeenPurchased: true);
+                        self.SetNoPickup();
                     }
                 }
                 else
@@ -123,19 +124,14 @@ namespace BazaarIsMyHaven
                 {
                     Dictionary<PickupIndex, int> resolvedItems = new Dictionary<PickupIndex, int>();
                     ItemStringParser.ItemStringParser.ParseItemString(ModConfig.EquipmentReplaceWithEliteList.Value, resolvedItems, Log.GetSource(), false);
-                    bool set = false;
                     foreach(var (pickupIndex, amount) in resolvedItems)
                     {
                         if (amount > 0) {
                             self.SetPickup(new UniquePickup(pickupIndex), newHidden);
-                            set = true;
                             return;
                         }
                     }
-                    if (!set)
-                    {
-                        Log.LogError($"Could not get a proper pickup index from EquipmentReplaceWithEliteList: {ModConfig.EquipmentReplaceWithEliteList.Value}");
-                    }
+                    Log.LogError($"Could not get a proper pickup index from EquipmentReplaceWithEliteList: {ModConfig.EquipmentReplaceWithEliteList.Value}");
                 }
             }
             orig(self, newHidden);
