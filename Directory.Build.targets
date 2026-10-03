@@ -1,0 +1,47 @@
+<Project>
+  <!-- Imported by the SDK after the project, in Visual Studio and the .NET CLI. -->
+  <PropertyGroup>
+    <LocalModBuildEnabled Condition="'$(MSBuildProjectName)' == 'BazaarIsMyHaven'">true</LocalModBuildEnabled>
+    <LocalModBuildDirectory>$(MSBuildThisFileDirectory)</LocalModBuildDirectory>
+  </PropertyGroup>
+
+  <Import Project="$(LocalModBuildDirectory)Local.props"
+          Condition="'$(LocalModBuildEnabled)' == 'true' and Exists('$(LocalModBuildDirectory)Local.props')" />
+
+  <!-- Prefer the author's source project and sibling DLLs whenever they exist. -->
+  <ItemGroup Condition="'$(LocalModBuildEnabled)' == 'true'">
+    <ProjectReference Remove="..\ItemStringParser\ItemStringParser.csproj"
+                      Condition="!Exists('$(MSBuildProjectDirectory)\..\ItemStringParser\ItemStringParser.csproj')" />
+    <Reference Include="ItemStringParser"
+               Condition="!Exists('$(MSBuildProjectDirectory)\..\ItemStringParser\ItemStringParser.csproj')">
+      <HintPath>$(LocalModBuildDirectory)libs\ItemStringParser.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Update="InLobbyConfig" Condition="!Exists('$(MSBuildProjectDirectory)\..\libs\InLobbyConfig.dll')">
+      <HintPath>$(LocalModBuildDirectory)libs\InLobbyConfig.dll</HintPath>
+    </Reference>
+    <!-- The existing ShareSuite integration uses reflection, so no DLL is needed to build. -->
+    <Reference Remove="ShareSuite" Condition="!Exists('$(MSBuildProjectDirectory)\..\libs\ShareSuite.dll')" />
+    <None Remove="libs\**" />
+  </ItemGroup>
+
+  <Target Name="RestoreLocalModDependencies" BeforeTargets="ResolveAssemblyReferences"
+          Condition="'$(LocalModBuildEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true' and ((!Exists('$(MSBuildProjectDirectory)\..\ItemStringParser\ItemStringParser.csproj') and !Exists('$(LocalModBuildDirectory)libs\ItemStringParser.dll')) or (!Exists('$(MSBuildProjectDirectory)\..\libs\InLobbyConfig.dll') and !Exists('$(LocalModBuildDirectory)libs\InLobbyConfig.dll')))">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(LocalModBuildDirectory)scripts\Restore-Dependencies.ps1&quot;" />
+  </Target>
+
+  <!-- Normal builds must not run the project's legacy machine-specific copy/ZIP commands. -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" />
+
+  <Target Name="DeployLocalMod" AfterTargets="Build"
+          Condition="'$(LocalModBuildEnabled)' == 'true' and '$(DeployOnBuild)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Error Condition="'$(ProfilePath)' == '' or !Exists('$(ProfilePath)\BepInEx\plugins')"
+           Text="Set ProfilePath in Local.props to an existing mod-manager profile containing BepInEx\plugins. See BUILDING.md." />
+    <ItemGroup>
+      <LocalModDeployFiles Include="$(TargetPath);$(TargetDir)newtdialog.language" />
+      <LocalModDeployFiles Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LocalModDeployFiles)" DestinationFolder="$(ProfilePath)\BepInEx\plugins\Def-BazaarIsMyHaven" SkipUnchangedFiles="true" />
+    <Message Text="Deployed BazaarIsMyHaven to $(ProfilePath)\BepInEx\plugins\Def-BazaarIsMyHaven" Importance="high" />
+  </Target>
+</Project>

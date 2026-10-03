@@ -1,0 +1,11 @@
+<Project>
+  <!-- Shared build defaults for Visual Studio and command-line builds. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'BazaarIsMyHaven'">
+    <Version>4.2.0</Version>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(RestoreLockedMode)' == ''">true</RestoreLockedMode>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <DeployOnBuild Condition="'$(DeployOnBuild)' == ''">false</DeployOnBuild>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.10.12224.181
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BazaarIsMyHaven", "BazaarIsMyHaven.csproj", "{B1E3120F-A762-4416-9D70-D473BEAFE39F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build setup", "Build setup", "{BB6BEB51-D506-428C-9CF5-78556E409E6E}"
+	ProjectSection(SolutionItems) = preProject
+		.vsconfig = .vsconfig
+		BUILDING.md = BUILDING.md
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		global.json = global.json
+		Local.props.example = Local.props.example
+		NuGet.Config = NuGet.Config
+		packages.lock.json = packages.lock.json
+		scripts\Restore-Dependencies.ps1 = scripts\Restore-Dependencies.ps1
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B1E3120F-A762-4416-9D70-D473BEAFE39F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1E3120F-A762-4416-9D70-D473BEAFE39F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1E3120F-A762-4416-9D70-D473BEAFE39F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1E3120F-A762-4416-9D70-D473BEAFE39F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

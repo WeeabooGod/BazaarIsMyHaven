@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- Copy this file to Local.props to configure your own mod-manager profile. -->
+    <!-- Set this to your profile directory containing BepInEx\plugins. -->
+    <ProfilePath></ProfilePath>
+    <!-- Enable only when this profile is ready for testing your build. -->
+    <DeployOnBuild>false</DeployOnBuild>
+  </PropertyGroup>
+</Project>

@@ -40,6 +40,9 @@ Not that any of this matters right? Its AI Slop no matter how I frame it to you.
 
 ---
 
+## Building 
+Project was edited and made with Visual Studio Community 2026 with the **.NET desktop development** workload and .NET SDK **10.0.401 or a later stable 10.0 feature band**. the supplied .csproj should still work for other IDE's though.
+
 ## Features ##
 Please reffer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I shall only go over what I added and changed
 

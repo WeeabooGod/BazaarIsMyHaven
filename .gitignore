@@ -1,2 +1,11 @@
+# Build output and downloaded compile-time references
 bin/
 obj/
+/libs/
+/releases/
+
+# Personal Visual Studio settings and optional deployment paths
+/.vs/
+*.user
+*.suo
+/Local.props
