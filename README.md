@@ -32,8 +32,10 @@ This was my own summarization of what I understand. Me, the human. I am a goblin
 ---
 **AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
 
-The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses. 
+The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses.
+
 I did not use code wholesale. Any assistance that was given was in pieces, I still had to put it together and ensure it works. Please feel free to curate my commits and provide reasons why my code is bad, I'll do my best to fix them. Consequently, Astra was used to help initialize the project
+
 I believe I put the necessary work to ensure none of what people usually mean by "AI Slop" is reflected in this project. This project wont break your game settings, it wont cause memory leaks, it wont blue screen your computer. I did my best to test it, with MultiplayerTestMod, UnityExplorer and all that jazz.
 
 ---
