@@ -13,7 +13,8 @@ namespace BazaarIsMyHaven
     // Unfortunately, took several tries to get this working until the Astra corrected mistakes. I hate networking...
     internal static class BazaarClientNetworking
     {
-        // Change the protocol version when the meaning or layout of our messages changes.
+        // Change the protocol version for incompatible message changes.
+        // Optional trailing fields can keep version 1 because older receivers ignore them.
         private const ushort ProtocolVersion = 1;
         private const ulong ProtocolMarker = 0x42494D4853434C31; //Identifer, belongs to our protocol. Hexedecimal Pairs represent BIMHSCLI which is BazaarIsMyHaven Scale Protocol 1
         private const int AdvertisementLength = 12; // Marker (8), version (2), message ID (2).
@@ -175,7 +176,11 @@ namespace BazaarIsMyHaven
             var message = new ScaleMessage
             {
                 shopId = shop.netId,
-                localScale = shop.transform.localScale
+                // Receivers apply scale before parenting, so transmit world size, including to older clients.
+                localScale = shop.transform.lossyScale,
+                addCostHologram = shop.GetComponent<LunarShopHologram>() != null,
+                shopName = shop.name,
+                parentToLunarShop = shop.transform.parent && shop.transform.parent == LunarShopScaleSync.FindLunarShopParent(shop.gameObject.scene)
             };
 
             // Send to this compatible connection only, never broadcast to all clients.
@@ -195,7 +200,7 @@ namespace BazaarIsMyHaven
                 var scaleMessage = message.ReadMessage<ScaleMessage>();
                 if (scaleMessage.compatible && IsValidScale(scaleMessage.localScale))
                 {
-                    LunarShopScaleSync.ReceiveScale(scaleMessage.shopId, scaleMessage.localScale, message.conn);
+                    LunarShopScaleSync.ReceiveScale(scaleMessage.shopId, scaleMessage.localScale, message.conn, scaleMessage.addCostHologram, scaleMessage.shopName, scaleMessage.parentToLunarShop);
                 }
             }
             catch (Exception exception)
@@ -229,6 +234,9 @@ namespace BazaarIsMyHaven
         {
             public NetworkInstanceId shopId;
             public Vector3 localScale;
+            public bool addCostHologram;
+            public string shopName;
+            public bool parentToLunarShop;
             public bool compatible;
 
             public override void Serialize(NetworkWriter writer)
@@ -237,6 +245,11 @@ namespace BazaarIsMyHaven
                 writer.Write(ProtocolVersion);
                 writer.Write(shopId);
                 writer.Write(localScale);
+
+                // Optional extensions: older clients ignore fields after the ones they understand.
+                writer.Write(addCostHologram);
+                writer.Write(shopName ?? string.Empty);
+                writer.Write(parentToLunarShop);
             }
 
             public override void Deserialize(NetworkReader reader)
@@ -244,10 +257,27 @@ namespace BazaarIsMyHaven
                 ulong marker = reader.ReadUInt64();
                 ushort version = reader.ReadUInt16();
                 compatible = marker == ProtocolMarker && version == ProtocolVersion;
+                addCostHologram = false;
+                shopName = string.Empty;
+                parentToLunarShop = false;
+
                 if (compatible)
                 {
                     shopId = reader.ReadNetworkId();
                     localScale = reader.ReadVector3();
+
+                    // Older hosts send only the scale fields, so absence means no added hologram.
+                    if (reader.Position < reader.Length)
+                    {
+                        addCostHologram = reader.ReadBoolean();
+                    }
+
+                    // Hologram-only hosts have no name or parent instruction.
+                    if (reader.Position < reader.Length)
+                    {
+                        shopName = reader.ReadString();
+                        parentToLunarShop = reader.ReadBoolean();
+                    }
                 }
             }
         }

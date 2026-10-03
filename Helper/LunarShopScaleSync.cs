@@ -13,7 +13,8 @@ using UnityEngine.SceneManagement;
 
 namespace BazaarIsMyHaven
 {
-    // Host-Only Bookeeping for lunar shops. Compatible clients receive a direct scale message; other clients use the vanilla RPC fallback.
+    // Host bookkeeping for lunar shops. Updated clients also receive their name, parent, and optional hologram.
+    // Clients without the mod use the vanilla RPC fallback for scale only.
     public class LunarShopScaleSync : MonoBehaviour
     {
         private static AsyncOperationHandle<GameObject> helperPrefab;
@@ -40,14 +41,36 @@ namespace BazaarIsMyHaven
             SceneManager.MoveGameObjectToScene(syncObject, shopObjects[0].scene);
             var sync = syncObject.AddComponent<LunarShopScaleSync>();
 
+            var parent = FindLunarShopParent(shopObjects[0].scene);
+            if (!parent)
+            {
+                Log.LogWarning("Could not find HOLDER: Store/LunarShop; custom lunar shops will remain at the scene root.");
+            }
+
             foreach (var shop in shopObjects)
             {
+                // Set the intended world size first, then preserve the world transform when parenting.
                 shop.transform.SetParent(null, true);
                 shop.transform.localScale = Vector3.one;
+                shop.transform.SetParent(parent, true);
                 sync.shops.Add(shop.GetComponent<NetworkIdentity>());
             }
 
             sync.StartCoroutine(sync.SynchronizeClients());
+        }
+
+        internal static Transform FindLunarShopParent(Scene scene)
+        {
+            // Search this shop's scene, including inactive holders, rather than objects in other loaded scenes.
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (root.name == "HOLDER: Store")
+                {
+                    return root.transform.Find("LunarShop");
+                }
+            }
+
+            return null;
         }
 
         private IEnumerator SynchronizeClients()
@@ -180,20 +203,19 @@ namespace BazaarIsMyHaven
             return allSent;
         }
 
-        internal static void ReceiveScale(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection)
+        internal static void ReceiveScale(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection, bool addCostHologram, string shopName, bool parentToLunarShop)
         {
-            Main.instance.StartCoroutine(ApplyScaleWhenSpawned(shopId, scale, connection));
+            Main.instance.StartCoroutine(ApplyScaleWhenSpawned(shopId, scale, connection, addCostHologram, shopName, parentToLunarShop));
         }
 
-        private static IEnumerator ApplyScaleWhenSpawned(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection)
+        private static IEnumerator ApplyScaleWhenSpawned(NetworkInstanceId shopId, Vector3 scale, NetworkConnection connection, bool addCostHologram, string shopName, bool parentToLunarShop)
         {
             int sceneHandle = SceneManager.GetActiveScene().handle;
             float deadline = Time.realtimeSinceStartup + 10f;
 
             // A scale message can arrive before Unity has finished creating its target object.
             // Do not retain it after a scene change, disconnect, or prolonged missing spawn.
-            while (NetworkClient.active && ClientScene.readyConnection == connection
-                && SceneManager.GetActiveScene().handle == sceneHandle && Time.realtimeSinceStartup < deadline)
+            while (NetworkClient.active && ClientScene.readyConnection == connection && SceneManager.GetActiveScene().handle == sceneHandle && Time.realtimeSinceStartup < deadline)
             {
                 var shop = ClientScene.FindLocalObject(shopId);
                 if (shop)
@@ -202,6 +224,33 @@ namespace BazaarIsMyHaven
                     {
                         shop.transform.SetParent(null, true);
                         shop.transform.localScale = scale;
+
+                        // Names identify the objects in debug tools; the message itself still uses the network ID.
+                        if (!string.IsNullOrEmpty(shopName))
+                        {
+                            shop.name = shopName;
+                        }
+
+                        if (parentToLunarShop)
+                        {
+                            var parent = FindLunarShopParent(shop.scene);
+                            if (parent)
+                            {
+                                // Keep the shop and its hologram at their existing world position, rotation, and size.
+                                shop.transform.SetParent(parent, true);
+                            }
+                            else
+                            {
+                                Log.LogWarning($"Could not find HOLDER: Store/LunarShop for object {shopId}; keeping it at the scene root.");
+                            }
+                        }
+
+                        // The host marks replacement terminals; client config does not decide this.
+                        if (addCostHologram)
+                        {
+                            LunarShopHologram.AddTo(shop);
+                        }
+
                         Log.LogDebug($"Applied direct lunar shop scale {scale} to object {shopId}.");
                     }
 

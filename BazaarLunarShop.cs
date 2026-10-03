@@ -659,8 +659,20 @@ namespace BazaarIsMyHaven
                 var purchaseInteraction = gameObject.GetComponent<PurchaseInteraction>();
                 var shopTerminalBehavior = gameObject.GetComponent<ShopTerminalBehavior>();
 
-                //Clear Lunar Buds of their defualt SetNoPickup Behavior
-                if (!ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
+                if (ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value)
+                {
+                    //When the lunar shop terminals are created, they are actually called "FreeChestTerminalShippingDrone", which causes them to miss 
+                    //price sets during the awake function. WolfoFixes supresses holograms with costtype of none making the new cost display hidden and gives the shipping containers a cost again.
+                    if (ModConfig.LunarShopCost.Value >= 0)
+                    {
+                        purchaseInteraction.Networkcost = ModConfig.LunarShopCost.Value;
+                        purchaseInteraction.NetworkcostType = CostTypeIndex.LunarCoin;
+                    }
+
+                    // Buds already have a price display; add one only to replacement terminals.
+                    LunarShopHologram.AddTo(gameObject);
+                }
+                else //Clear Lunar Buds of their defualt SetNoPickup Behavior
                 {
                     DisableLunarBudPickupClearing(purchaseInteraction, shopTerminalBehavior);
                 }
