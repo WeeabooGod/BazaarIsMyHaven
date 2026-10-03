@@ -26,6 +26,10 @@ namespace BazaarIsMyHaven
         
         private static string GetPlayerColor(PlayerCharacterMasterController pc)
         {
+            //Sanity Check
+            if (!pc)
+                return "f27b0c";
+
             var userName = pc.GetDisplayName();
             var survivorDef = SurvivorCatalog.FindSurvivorDefFromBody(pc.master?.bodyPrefab);
             if (survivorDef != null && survivorDef.primaryColor != null) {
@@ -41,9 +45,10 @@ namespace BazaarIsMyHaven
 
         private static string GetColoredPlayerName(PlayerCharacterMasterController playerCharacterMasterController)
         {
+            //GetBody() can return null so calling body.GetUserName() can throw an exception, get the name directly.
             var playerColor = GetPlayerColor(playerCharacterMasterController);
-            var body = playerCharacterMasterController.master.GetBody();
-            return $"<color=#{playerColor}>{body.GetUserName()}</color>";
+            var playerName = playerCharacterMasterController ? playerCharacterMasterController.GetDisplayName() : "Player";
+            return $"<color=#{playerColor}>{playerName}</color>";
         }
 
         public static void LunarShopTerminalUsesLeft(PlayerCharacterMasterController playerCharacterMasterController, int usesLeft)
@@ -89,6 +94,9 @@ namespace BazaarIsMyHaven
                 if (count <= 0)
                     continue;
                 var pickupDef = PickupCatalog.GetPickupDef(pickupIndex);
+                if (pickupDef == null)
+                    continue;
+
                 var itemName = pickupDef.internalName;
                 ColorCatalog.ColorIndex colorIndex = ColorCatalog.ColorIndex.Tier1Item;
                 if (pickupDef.itemIndex != ItemIndex.None)
@@ -100,8 +108,11 @@ namespace BazaarIsMyHaven
                         itemName = Language.GetString(itemDef.nameToken);
                     if (string.IsNullOrWhiteSpace(itemName))
                         itemName = itemDef.name;
-                    if (itemDef.tier != ItemTier.NoTier)
-                        colorIndex = ItemTierCatalog.GetItemTierDef(itemDef.tier).colorIndex;
+
+                    //Sanity check defense for custom tiers, as tierDef could be null
+                    var tierDef = ItemTierCatalog.GetItemTierDef(itemDef.tier);
+                    if (tierDef)
+                        colorIndex = tierDef.colorIndex;
                 }
                 else if (pickupDef.equipmentIndex != EquipmentIndex.None)
                 {
