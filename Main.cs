@@ -273,7 +273,7 @@ namespace BazaarIsMyHaven
         {
             if (IsCurrentMapInBazaar()) //Apperently SPEX is a Newt this should prevent the welcome message from playing in the computational exchange
             {
-                if (ModConfig.EnableMod.Value && ModConfig.NewtSectionEnabled.Value && NetworkServer.active && NetworkServer.active)
+                if (ModConfig.EnableMod.Value && ModConfig.NewtSectionEnabled.Value && NetworkServer.active)
                 {
                     if (ModConfig.NewtGreeting.Value)
                     {

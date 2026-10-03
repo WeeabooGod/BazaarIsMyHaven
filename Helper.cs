@@ -127,7 +127,7 @@ namespace BazaarIsMyHaven
             bool equipLoop = false;
             foreach (var (pickupIndex, itemAmount) in itemsToGive)
             {
-                if (itemAmount <= 0 || pickupIndex == PickupIndex.none)
+                if (itemAmount <= 0)
                     continue;
                 var pickupDef = PickupCatalog.GetPickupDef(pickupIndex);
                 if (pickupDef == null)

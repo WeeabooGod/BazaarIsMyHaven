@@ -30,13 +30,12 @@ namespace BazaarIsMyHaven
             if (!pc)
                 return "f27b0c";
 
-            var userName = pc.GetDisplayName();
             var survivorDef = SurvivorCatalog.FindSurvivorDefFromBody(pc.master?.bodyPrefab);
-            if (survivorDef != null && survivorDef.primaryColor != null) {
+            if (survivorDef != null) {
                 return ColorUtility.ToHtmlStringRGB(survivorDef.primaryColor);
             }
             var body = pc.master?.GetBody();
-            if (body != null && body.bodyColor != null)
+            if (body != null)
             {
                 return ColorUtility.ToHtmlStringRGB(body.bodyColor);
             }

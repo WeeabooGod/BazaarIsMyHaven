@@ -85,8 +85,9 @@ namespace BazaarIsMyHaven
                     NetworkUser networkUser = Util.LookUpBodyNetworkUser(activator.gameObject);
                     CharacterMaster characterMaster = characterBody.master;
                     var pc = characterMaster.playerCharacterMasterController;
+                    // This handler deducts lunar coins directly, so check the exact amount it charges.
                     if (!pc || !networkUser || !self.available || self.Networkcost < 0 ||
-                        networkUser.lunarCoins < (uint)self.Networkcost || !self.CanBeAffordedByInteractor(activator))
+                        networkUser.lunarCoins < (uint)self.Networkcost)
                         return;
 
                     var playerStruct = Main.instance.GetPlayerStruct(pc);
@@ -120,7 +121,7 @@ namespace BazaarIsMyHaven
                 (ModConfig.DonateRewardListCharacterWeight.Value, 4),
             };
             // Ignore disabled or invalid weights before selecting a reward.
-            combined.RemoveAll(item => !(item.weight > 0) || float.IsInfinity(item.weight));
+            combined.RemoveAll(item => item.weight <= 0);
             if (combined.Count == 0)
             {
                 Log.LogWarning("No donation reward lists have a valid positive weight; no coins were charged.");
@@ -136,7 +137,7 @@ namespace BazaarIsMyHaven
             }
             else
             {
-                double random = RNG.NextDouble() * combined.Sum(item => (double)item.weight);
+                double random = RNG.NextDouble() * combined.Sum(item => item.weight);
                 tier = combined[combined.Count - 1].tier;
                 foreach (var entry in combined)
                 {
