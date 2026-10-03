@@ -1,356 +1,48 @@
 # BazaarIsMyHaven
 
-**server-side mod** - only the host needs it installed.
+**server-side mod** - Majority of features remain functional with optional client side syncing for networked features that require it.
 
-This is a fork of Lunzir's excellent [BazaarIsMyHome](https://thunderstore.io/package/Lunzir2/BazaarIsMyHome/) mod.
+This is an independently maintained derivative of [BazaarIsMyHaven](https://thunderstore.io/c/riskofrain2/p/Def/BazaarIsMyHaven/) by [Deflaktor](https://github.com/Deflaktor/BazaarIsMyHaven), itself based on [BazaarIsMyHome](https://thunderstore.io/c/riskofrain2/p/Lunzir2/BazaarIsMyHome/) by [Lunzir](https://github.com/Lunzir-0325/RoR2-BazaarIsMyHome). This mod will retain the configurable features of BazaarIsMyHaven while developing its own changes for multiplayer behavior and presentation.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E71PHUJ2)
+The project aims to fix the issues of BazaarIsMyHaven while potentially introducing requested features as well.
 
-## Features
+- **Fixed Features**
+  - Shop Terminals not retaining scale for clients
+      - As a server only mod, this was done by using the Drifterhoard prefab which includes ItemShareController.RpcParentToMuzzle procedure. This RPC function re-scales game-objects even for clients. I do not like this myself, but I wanted to keep this mod server-sided as best as I can
+          - #TO-DO: Optional client side networking to properly sync scale without having to use work around.
+  - Re-rolling breaking in newest version
+  - Purchases being free
+  - Instancing not working correctly under specific circumstances
+      - Instancing also did not mesh well with re-rolling
+  - Buds make a return, now you can have more than 5 buds with Shop features.
 
-- **Extra Interactables in the Bazaar** (configurable):
-  - 3D Printers
-  - Additional Cauldrons
-  - Scrappers
-  - Equipment Terminals
-  - Lunar Shop (customizable)
-  - Cleansing Pool
-  - Shrine of Order
-  - Donation Altar
-  - Wandering Chef
+- **Reworked Features**
+  - Instancing was reworked to include extra states, a queue, and additional bookkeeping for use for re-rolling.
+      - When instance purchases was on, various buggy interactions could happen. Host could buy an item, and clients would receive nothing on the same item. Rer-oll would re-roll items already purchased from clients. Host was largely authoritative over tracking purchases.
+  ~Added Changes
+    - Correct buyer states; purchases temporarily use the buyer's shop data then restores the host's view.
+        - Instances also track for states to protect re-roll, and swapped equipment
+              - Old re-roll path called normal shop-generation. We can now skip purchased shops and have various states to ensure each instance client gets only what should be re-rolled. 
+    - broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability,.
+    - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
+    - Queued update system allows slow clients to process messages without causing mismatches.
 
-- **Newt Behavior Options**:
-  - Stop him from throwing you out.
-  - Change what happens after you kill him.
-  - Extra dialogue lines.
+This was my own summarization of what I understand. Me, the human. Speaking of which...
 
-- **Portal Options**:
-  - Spawn a Bazaar portal after *every* teleporter event.
+**AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
+        Ah, the death-mark a project. 
 
-- **Other Tweaks**:
-  - Extra decoration in the Bazaar.
-  - Settings to gradually increase interactables as you complete more stages during the run.
+Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. Not reflected are my attempts at doing this myself. I already know I am going to hell for this, but I suppose I shall share my carefully curated and tested slop to the masses. 
 
-- **Compatiblity with other Mods**
-  - [BiggerBazaar](https://thunderstore.io/package/MagnusMagnuson/BiggerBazaar/)
-  - [InLobbyConfig](https://thunderstore.io/package/KingEnderBrine/InLobbyConfig/)
+I did not use code wholesale. Any assistance that was given was in pieces, I still had to put it together and ensure it works. I uploaded this Github so you can curate my code directly without having to use ILSpy too disparage my character or lackluster coding ability for using AI. Consequently, Astra was used to help initialize the project, and update any packages, getting ready for work in Visual Studio 2026. I did not supply the solution file, but can if requested. I wanted to keep this as similar to Deflaktor's and Lunzir's organization as possible. 
 
-## Key Settings
+Not that any of this matters right? I used AI, therefore its bad. Thats fine. I agree, I cannot argue with that. I too hate AI Slop. I just believe I put the nessesary work to ensure none of that is reflected in that project. This project wont break your project settings, it wont cause memory leaks, it wont blue screen your computer. I actually tested it, and its built off the don't trust me, atleast trust the forks.
 
-In-detail descriptions for some of the settings:
 
-### General - SpawnCountByStage
+## Features ##
+Please reffer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I shall only go over what I added and changed
 
-This settings makes it so that the more stage are completed, the more interactables are spawned in the Bazaar. If you just start the run and go immediately to the Bazaar you will see few interactables. But as you progress further, more and more interactables will get spawned. Up to the configured limit of each respective interactable. The `SpawnCountByStage` setting enables this behavior. There is also the `SpawnCountOffset` which allows you to either add a baseline amount of interactables or make interactables increase even later. Can be both positive or negative. The formula is a follows:
+# Known Issues
 
-Formula: `Amount of Interactables per Type = Number of Stages Completed + SpawnCountOffset`
-
-### Newt – DeathBehavior
-
-Controls how Newt acts after being killed:
-
-- `Default` → Normal behavior.  
-- `Tank` → Newt Health is significantly reduced. Revives with double HP.
-- `Ghost` → Newt Health is significantly reduced. Revives as a ghost.
-- `Hostile` → Newt Health is significantly reduced. Revives and starts defending himself.
-
-### LunarShop
-
-You can freely configure which items can be bought at the LunarShop. There are two settings to configure this:
-
-- `SequentialItems`:
-  - **True** → Items are picked sequentially from the list. As such, if the number of Lunar Shop Terminals and the number of items in the list are the same, you will always find the same items in the Bazaar.
-  - **False** → Items are picked at random from the list.
-
-- `ItemList`:
-  - Follows the [ItemStringPaser](https://thunderstore.io/package/Def/ItemStringParser/) format.
-  - A list of items to appear. Must be internal items names. Can use tier or droptables as well, see *Item Keywords* below.
-  - Examples:
-    - `Tier1 | Tier2 | Tier3 | Lunar | Boss`: If `SequentialItems` is set to `True` and `Amount` to 5, then you will find exactly 1 white item, 1 green item, 1 red item, 1 lunar item and 1 boss item in the shop.
-    - `dtLunarChest`: This is the vanilla behavior of the game.
-    - `FreeChest | VoidTier1 | dtChest2`: 1 Shipping Request Form, one random item of Void Tier 1 and one random item of the droptable of a large chest.
-  - The Repeat and Multiplier operators do not play a role here.
-
-### Donation Altar
-
-The Donate setting spawns a donation box near the Newt. After donating 10 times, the Newt will give you a reward. There are 3 item lists which are selected at random:
-
-- `RewardList1`: By default contains either 5 small chest items or 2 large chest items.
-- `RewardList2`: By default contains either 1 legendary item or 1 boss item.
-- `RewardList3`: Disabled by default. By default contains some unreleased or unfinished items.
-
-These reward lists can be fully customized. They follow the [ItemStringPaser](https://thunderstore.io/package/Def/ItemStringParser/) format. See the below section *Item Keyword List* on what are valid values. With the donate reward lists, it is possible to reward multiple items at the same time.
-
-Examples:
-
-`RewardList1 = 5xdtITDefaultWave`: The reward will be 5 random items of the droptable of void potentials from the Simulacrum mode.
-
-`RewardList1 = 5xdtChest1 | 2xdtChest2`: The reward will be either 5 random items of the small chest droptable or 2 random items of the large chest droptable.
-
-## RewardListAvailableCharacters - Valid Keywords
-
-### Survivors
-
-Bandit2
-Captain
-Commando
-Croco
-Engi
-Heretic
-Huntress
-Loader
-Mage
-Merc
-Toolbot
-Treebot
-Railgunner
-VoidSurvivor
-Chef
-FalseSon
-Seeker
-Drifter
-DroneTech
-
-### Other Bodies
-
-AcidLarvaBody
-AffixEarthHealerBody
-AltarSkeletonBody
-AncientWispBody
-ArchWispBody
-ArtifactShellBody
-Assassin2Body
-AssassinBody
-BackupDroneBody
-BackupDroneBodyRemoteOp
-BackupDroneOldBody
-Bandit2Body
-BanditBody
-BasePodBody
-BasePodBody_NoRevive
-BeadProjectileTrackingBomb
-BeetleBody
-BeetleCrystalBody
-BeetleGuardAllyBody
-BeetleGuardBody
-BeetleGuardCrystalBody
-BeetleQueen2Body
-BeetleWard
-BellBody
-BirdsharkBody
-BisonBody
-BombardmentDroneBody
-BombardmentDroneBodyRemoteOp
-BomberBody
-BrotherBody
-BrotherGlassBody
-BrotherHauntBody
-BrotherHurtBody
-CaptainBody
-ChefBody
-ChildBody
-ClayBody
-ClayBossBody
-ClayBruiserBody
-ClayGrenadierBody
-CleanupDroneBody
-CleanupDroneBodyRemoteOp
-CommandoBody
-CommandoPerformanceTestBody
-CopycatDroneBody
-CopycatDroneBodyRemoteOp
-CorruptionSpike
-CrocoBody
-DTGunnerDroneBody
-DTGunnerDroneBrokenBody
-DTHaulerDroneBody
-DTHaulerDroneBrokenBody
-DTHealingDroneBody
-DTHealingDroneBrokenBody
-DeathProjectile
-DefectiveUnitBody
-DestructibleSpawnerObjectBody
-DevotedLemurianBody
-DevotedLemurianBruiserBody
-DrifterBody
-DrifterShieldTank
-DrifterThqwib
-Drone1Body
-Drone1BodyRemoteOp
-Drone2Body
-Drone2BodyRemoteOp
-DroneBallDotZone
-DroneBomberBody
-DroneCommanderBody
-DroneTechBody
-DroneTechShield
-ElectricWormBody
-EmergencyDroneBody
-EmergencyDroneBodyRemoteOp
-EnforcerBody
-EngiBeamTurretBody
-EngiBody
-EngiTurretBody
-EngiWalkerTurretBody
-EquipmentDroneBody
-EquipmentDroneBodyRemoteOp
-ExhaustPortWeakpointBody
-ExplosiveJunkBombDestructibleBody
-ExplosivePotDestructibleBody
-ExtractorUnitBody
-FalseSonBody
-FalseSonBossBody
-FalseSonBossBodyBrokenLunarShard
-FalseSonBossBodyLunarShard
-FireExtinguisherPodBody
-FlameDroneBody
-FlameDroneBodyRemoteOp
-FlyingVerminBody
-FriendUnitBody
-FusionCellDestructibleBody
-GeepBody
-GipBody
-GolemBody
-GolemBodyInvincible
-GrandParentBody
-GravekeeperBody
-GravekeeperTrackingFireball
-GreaterWispBody
-GupBody
-HANDBody
-HalcyoniteBody
-HaulerBody
-HaulerDroneBody
-HeatSinkPodBody
-HeaterPodBody
-HeaterPodBodyNoRespawn
-HeaterPodBodyNoRespawn_Large
-HereticBody
-HermitCrabBody
-HuntressBody
-ITBrotherBody
-ImpBody
-ImpBossBody
-IronHaulerBody
-JailerDroneBody
-JailerDroneBodyRemoteOp
-JellyfishBody
-JunkCubeConsoleOptPrefabVariant
-JunkCubePrefab
-JunkDroneBody
-JunkDroneBodyRemoteOp
-LemurianBody
-LemurianBruiserBody
-LoaderBody
-LunarExploderBody
-LunarGolemBody
-LunarRain
-LunarRain_DistanceTest
-LunarWispBody
-LunarWispTrackingBomb
-MageBody
-MagmaWormBody
-MajorConstructBody
-MegaConstructBody
-MegaDroneBody
-MegaDroneBodyRemoteOp
-MercBody
-MinePodBody
-MiniGeodeBody
-MiniMushroomBody
-MiniVoidRaidCrabBodyBase
-MiniVoidRaidCrabBodyPhase1
-MiniVoidRaidCrabBodyPhase2
-MiniVoidRaidCrabBodyPhase3
-MinorConstructAttachableBody
-MinorConstructBody
-MinorConstructOnKillBody
-MissileDroneBody
-MissileDroneBodyRemoteOp
-NullifierAllyBody
-NullifierBody
-PaladinBody
-ParentBody
-ParentPodBody
-Pot2Body
-PotMobile2Body
-PotMobileBody
-PowerOrbShieldTank
-RailgunnerBody
-RechargeDroneBody
-RechargeDroneBodyRemoteOp
-RoboBallBossBody
-RoboBallGreenBuddyBody
-RoboBallMiniBody
-RoboBallRedBuddyBody
-SMInfiniteTowerMaulingRockLarge
-SMInfiniteTowerMaulingRockMedium
-SMInfiniteTowerMaulingRockSmall
-SMMaulingRockLarge
-SMMaulingRockMedium
-SMMaulingRockSmall
-ScavBody
-ScavLunar1Body
-ScavLunar2Body
-ScavLunar3Body
-ScavLunar4Body
-ScavSackProjectile
-ScorchlingBody
-ScorchlingBombProjectile
-SeekerBody
-ShopkeeperBody
-SniperBody
-SolusAmalgamatorBody
-SolusAmalgamatorFlamethrowerCannonBody
-SolusAmalgamatorMissilePodBody
-SolusAmalgamatorThrusterBody
-SolusAmalgamatorTrackingBomb
-SolusHeartBody
-SolusHeartBody_Logbook
-SolusHeartBody_Offering
-SolusHeart_DDOSProjectile
-SolusMineBody
-SolusVendorBody
-SolusWingBody
-SolusWingLogbookBody
-SolusWing_LaserBurstBlastProjectile
-SpectatorBody
-SpectatorSlowBody
-SquidTurretBody
-SulfurPodBody
-SuperRoboBallBossBody
-TankerAccelerantPuddleBodyProjectile
-TankerBody
-TankerLogbookBody
-TeleportComboLaserProjectile
-TimeCrystalBody
-TitanBody
-TitanGoldBody
-ToolbotBody
-TreebotBody
-Turret1Body
-UnderclockSpawnerProjectile
-UrchinTurretBody
-VagrantBody
-VagrantTrackingBomb
-VerminBody
-VoidBarnacleBody
-VoidBarnacleNoCastBody
-VoidInfestorBody
-VoidJailerAllyBody
-VoidJailerBody
-VoidMegaCrabAllyBody
-VoidMegaCrabBody
-VoidRaidCrabBody
-VoidRaidCrabJointBody
-VoidSurvivorBody
-VultureBody
-VultureEggBody
-VultureHunterBody
-WispBody
-WispSoulBody
-WorkerUnitBody
-
-## Known issues
-
-- Lunar Shop Terminal Price and Equipment Price labels are **not** displayed. This can't be fixed with a server-side mod.
+With a heavy heart I have to admit that I still could not figure out a way to sync client scale for terminals. Oriignally, with terminals, the scale in the prefab was set to .75. This isnt quite noticable, but was when I reimplemented lunar buds to the equation, which had a default scale of .5. 
+This cannot be fixed with a host only mod. However, will be fixed if the client shares the same mod, this is still completely optional.
