@@ -46,7 +46,7 @@ This was my own summarization of what I understand. Me, the human. I am a goblin
 
 The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling and unity networking in general. I already know I am going to hell for this, but I suppose I shall share my carefully curated verified and tested slop to the masses. 
 
-I did not use code wholesale. I would be given a list based on a read-only review of the project of what I COULD do, then I look through that list and implement where I see fit. I would copy comments where useful, and try to write my own on how I understand it. While I am no expert at programming, I do have actual experience with programming. I only used AI to help me where I struggled, and even then I only ever wanted to see examples and goals of what I could do, not have it done for me.
+I did not use code wholesale. I would be given a list based on a read-only review of the project of what I COULD do, then I look through that list and implement where I see fit. I would copy comments where useful, and try to write my own on how I understand it. While I am no expert at programming, I do still have meaningful experience in the skill. I only used AI to help me where I struggled, and even then I only ever wanted to see examples and goals of what I could do, not have it done for me. If I did not understand something, it was not implemented.
 
 My main goal is to fix bugs that existed. Through my own testing, as much as I can do alone and with UnityExplorer and MultiplayerTesting mod have confirmed some form of stability. Please, if any problems where found, report and I'll try to fix.
 
