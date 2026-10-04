@@ -1,3 +1,11 @@
+# 5.0.0
+- Lunar buds are created when shop terminals are not enabled, allowing to modify the cost and amount of default buds, maintaining original functionality.
+- Fixed Re-rolling not functioning under specific circumstances and not meshing with re-rolling functions
+- Added proper instancing to protect re-roll keep track shop buyers for networking, preventing client bought shops from re-rolling
+- Added proper networked syncing for scale, cost and re-rolling that works under Unity's default newtworking message, offering a clean way to sync scale without using fallbacks for host and clients with the same mod installed
+- Added an optionally disable-able fallback for syncing gameobjects of the lunarshopterminals and buds when lunarshopsection is enabled for clients without the mod to maintian server-sidedness
+- Added an optionally disable-able fallback for adding a cost hologram for lunarshopterminals for clients without the mod, maintaining server-sidedness
+  
 # 4.2.0
 
 - Add LunarShop AmountDependingOnCharacter
