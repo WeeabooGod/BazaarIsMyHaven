@@ -30,13 +30,10 @@
     <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(LocalModBuildDirectory)scripts\Restore-Dependencies.ps1&quot;" />
   </Target>
 
-  <!-- Normal builds must not run the project's legacy machine-specific copy/ZIP commands. -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" />
-
   <Target Name="DeployLocalMod" AfterTargets="Build"
           Condition="'$(LocalModBuildEnabled)' == 'true' and '$(DeployOnBuild)' == 'true' and '$(DesignTimeBuild)' != 'true'">
     <Error Condition="'$(ProfilePath)' == '' or !Exists('$(ProfilePath)\BepInEx\plugins')"
-           Text="Set ProfilePath in Local.props to an existing mod-manager profile containing BepInEx\plugins. See BUILDING.md." />
+           Text="Set ProfilePath in Local.props to an existing mod-manager profile containing BepInEx\plugins. See README.md." />
     <ItemGroup>
       <LocalModDeployFiles Include="$(TargetPath);$(TargetDir)newtdialog.language" />
       <LocalModDeployFiles Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
