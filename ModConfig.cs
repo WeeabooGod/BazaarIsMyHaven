@@ -73,6 +73,7 @@ namespace BazaarIsMyHaven
         public static ConfigEntry<bool> LunarShopBuyToInventory;
         public static ConfigEntry<string> LunarShopAmountDependingOnCharacter;
         public static Dictionary<BodyIndex, int> LunarShopAmountDependingOnCharacterParsed = new Dictionary<BodyIndex, int>();
+        public static ConfigEntry<bool> LunarShopUseFallbackMethods;
 
         // lunarRecycler
         public static ConfigEntry<bool> LunarRecyclerSectionEnabled;
@@ -194,6 +195,7 @@ namespace BazaarIsMyHaven
             LunarShopInstancedPurchases = config.Bind("06 LunarShop", "InstancedPurchases", true, "Each player can buy independently from Lunar Shop.");
             LunarShopBuyToInventory = config.Bind("06 LunarShop", "BuyToInventory", true, "Items go directly into inventory instead of dropping on ground.");
             LunarShopAmountDependingOnCharacter = config.Bind("06 LunarShop", "AmountDependingOnCharacter", "", "Change the amount of available shop terminals depending on the current Character. Requires ReplaceLunarBudsWithTerminals and InstancedPurchases to work. Also the value cannot be larger than Amount. Comma-separated list in the format <characterBody|survivorName>=<amount>.\nExample: Seeker=15, FalseSon=16");
+            LunarShopUseFallbackMethods = config.Bind("06 LunarShop", "FallbackShop&Cost", true, "Enable/Disables fallback methods for syncing scale and creating cost hologram for clients without the mod. Warning: without this, lunar buds will be at a scale of .5. LunarShopTerminals .75, and when using terminals, their custom cost will be ambigous for clients without this mod. Useful for modpacks which intend to have the mod installed, or if you just don't want to have it on.");
 
             // 07 Lunar Recycling
             LunarRecyclerSectionEnabled = config.Bind("07 LunarRecycler", "SectionEnabled", true, "Enables or disables the Lunar Recycler section.");

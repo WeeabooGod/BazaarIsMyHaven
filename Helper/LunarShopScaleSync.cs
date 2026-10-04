@@ -145,7 +145,8 @@ namespace BazaarIsMyHaven
                     continue;
                 }
 
-                if (messageId == 0 && fallbackUnavailable)
+                // The host can opt out of both fallbacks while keeping direct updates for modded clients.
+                if (messageId == 0 && (!ModConfig.LunarShopUseFallbackMethods.Value || fallbackUnavailable))
                 {
                     continue;
                 }

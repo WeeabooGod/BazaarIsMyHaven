@@ -172,7 +172,8 @@ namespace BazaarIsMyHaven
         public override bool OnCheckObserver(NetworkConnection connection)
         {
             // Wait for authentication; neither the host nor compatible clients need this extra sign.
-            return connection != null && connection.isReady && !Util.ConnectionIsLocal(connection)
+            // Rebuilding observers also hides an existing sign if fallbacks are disabled during a visit.
+            return ModConfig.LunarShopUseFallbackMethods.Value && connection != null && connection.isReady && !Util.ConnectionIsLocal(connection)
                 && BazaarClientNetworking.TryGetScaleMessageId(connection, out short messageId) && messageId == 0;
         }
 
