@@ -33,6 +33,11 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
   - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will only have a single cost on the side of the table. No more price ambiguity.
   - Technically discussed earlier, but a proper client side syncing is available for clients who have the mod installed. Offers a much more reliable, and cleaner way to adjust model size and corrections without having to resort to workarounds.
 
+- **ToDo's**
+  - Consider an optional rare Drone Recycler & Combiner to be added to the bazaar
+
+Please refer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I only went over what I changed and fixed.
+
 This was my own summarization of what I understand. Me, the human. I am a goblin with no experience in creating git commits. I usually never share my work, my commits will be as horrible as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
 
 ---
@@ -47,13 +52,16 @@ My main goal is to fix bugs that existed. Through my own testing, as much as I c
 Original mod remains completely functional, please use that if you still do not trust me.
 
 ---
-Please refer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I only went over what I changed and fixed.
 
 ## Building
 Project was edited and made with Visual Studio Community 2026 with the **.NET desktop development** workload and .NET SDK **10.0.401 or a later stable 10.0 feature band**. the supplied .csproj should still work for other IDE's though.
 
 ## Known Issues / Multiplayer Considerations
 
-I tested what I could being a lonely guy with no friends, but scale syncing appears to work now, for modded clients or un-modded. Client having the mod is completely optional, but if they do have it, they get some extra features. If Replace Lunar with Terminals is active, lunar terminals now have their cost on the terminals. It still remains unsolved if I can spawn the cost sign for un-modded clients.
+Most host to clients-without-mods functions offer workarounds to provide solutions to problems. 
+1. Create a Drifterhoard to hook its networked object to properly scale lunarbuds and lunarshopterminals to their proper size isint its build in RPC commands. This means a drifterhoard will exist in scene
+2. Create a copy of a seer terminal to have a common sale price on the table for lunar terminals. terminals do not have a cost hologram, leaving what it price could be ambiguous. It has a similar philosophy to the above.
+
+Host will not generate these work around's alone, or with other clients that have the mod installed.
 
 Its also currently possible slow clients could experience issues with delays in model size corrections, or have it not work entirely, but this should be rare.
