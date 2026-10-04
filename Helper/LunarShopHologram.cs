@@ -7,7 +7,8 @@ namespace BazaarIsMyHaven
     public class LunarShopHologram : MonoBehaviour
     {
         // Adjust this offset after finding a suitable local position with the in-game debug tools.
-        private static readonly Vector3 HologramLocalPosition = new Vector3(-0.1f, 1f, 1f);
+        private static readonly Vector3 HologramLocalPosition = new Vector3(-0.175f, 1f, 1f);
+        private static readonly Vector3 HologramLocalEulerAngles = new Vector3(0f, 180f, 180f);
         private const string PivotName = "BazaarCostHologramPivot";
 
         public static void AddTo(GameObject terminal)
@@ -24,6 +25,7 @@ namespace BazaarIsMyHaven
             var pivot = new GameObject(PivotName).transform;
             pivot.SetParent(transform, false);
             pivot.localPosition = HologramLocalPosition;
+            pivot.localRotation = Quaternion.Euler(HologramLocalEulerAngles);
 
             var projector = GetComponent<HologramProjector>();
             if (!projector)
