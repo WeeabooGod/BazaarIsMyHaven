@@ -744,8 +744,8 @@ namespace BazaarIsMyHaven
                 //Main.instance.StartCoroutine(DelayRerollEffect(shopTerminalBehavior, 0.1f, false));
             }
 
-            // Compatible clients will recieve scale updates directly, clients without mod will use RPC fallback.
-            LunarShopScaleSync.Apply(gameObjects);
+            // Compatible clients receive direct updates; unmodded clients use the optional bud-scale or terminal-price fallback.
+            LunarShopScaleSync.Apply(gameObjects, isLunarBuds: !ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value);
         }
     }
 }

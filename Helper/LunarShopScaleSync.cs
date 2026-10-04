@@ -14,12 +14,13 @@ using UnityEngine.SceneManagement;
 namespace BazaarIsMyHaven
 {
     // Host bookkeeping for lunar shops. Updated clients also receive their name, parent, and optional hologram.
-    // Clients without the mod use the vanilla RPC fallback for scale only.
+    // Clients without the mod use a scale fallback for buds, or a shared price sign for terminals.
     public class LunarShopScaleSync : MonoBehaviour
     {
         private static AsyncOperationHandle<GameObject> helperPrefab;
         private readonly List<NetworkIdentity> shops = new List<NetworkIdentity>();
         private readonly HashSet<NetworkConnection> synchronizedClients = new HashSet<NetworkConnection>();
+        private bool isLunarBuds;
         private bool fallbackUnavailable;
         private bool fallbackHologramUnavailable;
         private LunarShopFallbackHologram fallbackHologram;
@@ -32,7 +33,7 @@ namespace BazaarIsMyHaven
             helperPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/Drifter/DrifterHoard.prefab");
         }
 
-        public static void Apply(List<GameObject> shopObjects)
+        public static void Apply(List<GameObject> shopObjects, bool isLunarBuds)
         {
             if (!NetworkServer.active || !ModConfig.EnableMod.Value || !ModConfig.LunarShopSectionEnabled.Value || shopObjects.Count == 0)
             {
@@ -42,6 +43,7 @@ namespace BazaarIsMyHaven
             var syncObject = new GameObject("LunarShopScaleSync");
             SceneManager.MoveGameObjectToScene(syncObject, shopObjects[0].scene);
             var sync = syncObject.AddComponent<LunarShopScaleSync>();
+            sync.isLunarBuds = isLunarBuds;
 
             var parent = FindLunarShopParent(shopObjects[0].scene);
             if (!parent)
@@ -53,7 +55,11 @@ namespace BazaarIsMyHaven
             {
                 // Set the intended world size first, then preserve the world transform when parenting.
                 shop.transform.SetParent(null, true);
-                shop.transform.localScale = Vector3.one;
+                // Buds need scale 1; replacement terminals keep their prefab scale.
+                if (isLunarBuds)
+                {
+                    shop.transform.localScale = Vector3.one;
+                }
                 shop.transform.SetParent(parent, true);
                 RefreshPickupDisplay(shop);
                 sync.shops.Add(shop.GetComponent<NetworkIdentity>());
@@ -133,7 +139,7 @@ namespace BazaarIsMyHaven
 
             foreach (var connection in NetworkServer.connections)
             {
-                // The host already has scale 1 and must not receive the RPC's position reset.
+                // The host already has the intended scale and must not receive the RPC's position reset.
                 if (connection == null || !connection.isReady || Util.ConnectionIsLocal(connection) || synchronizedClients.Contains(connection))
                 {
                     continue;
@@ -200,22 +206,32 @@ namespace BazaarIsMyHaven
                 }
             }
 
-            if (fallbackClients.Count > 0) //Fallback using workaround for syncing scale without client having the mod
+            if (fallbackClients.Count > 0) //Fallback visuals for clients without the mod
             {
-                EnsureFallbackHologram();
-
-                try
+                if (isLunarBuds)
                 {
-                    if (!SendFallbackScaleUpdates(fallbackClients))
+                    try
                     {
-                        allSent = false;
+                        if (!SendFallbackScaleUpdates(fallbackClients))
+                        {
+                            allSent = false;
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        // A changed or missing fallback prefab must not stop direct updates for later joins.
+                        fallbackUnavailable = true;
+                        Log.LogError($"Lunar shop scale fallback failed; direct client support remains active: {exception}");
                     }
                 }
-                catch (Exception exception)
+                else
                 {
-                    // A changed or missing fallback prefab must not stop direct updates for later joins.
-                    fallbackUnavailable = true;
-                    Log.LogError($"Lunar shop scale fallback failed; direct client support remains active: {exception}");
+                    // Terminals already have the correct scale on clients. Only their shared price sign is needed.
+                    EnsureFallbackHologram();
+                    foreach (var connection in fallbackClients)
+                    {
+                        synchronizedClients.Add(connection);
+                    }
                 }
             }
 
