@@ -1,12 +1,12 @@
 {
-    "name": "BazaarIsMyHaven",
-    "version_number": "4.2.0",
-    "website_url": "https://github.com/Deflaktor/BazaarIsMyHaven",
-    "description": "Adds lots of configurable features to the Bazaar: Printers, Scrappers, Cauldrons, Equipment Terminals and more. Fork of BazaarIsMyHome.",
-    "dependencies": [
-        "RiskofThunder-R2API_Core-5.3.0",
-        "RiskofThunder-R2API_Language-1.1.0",
-        "RiskofThunder-RoR2BepInExPack-1.43.0",
-        "Def-ItemStringParser-2.0.0"
-    ]
+  "name": "BazaarIsMyNetwork-Rerolled",
+  "version_number": "5.0.0",
+  "website_url": "https://github.com/WeeabooGod/BazaarIsMyNetwork-Rerolled",
+  "description": "Fixes networking issues the original fork had, as well as add features related to networking, and instancing. Rerolling was also broken, which is now fixed. Fork of BazaarIsMyHaven.",
+  "dependencies": [
+    "RiskofThunder-R2API_Core-5.3.0",
+    "RiskofThunder-R2API_Language-1.1.0",
+    "RiskofThunder-RoR2BepInExPack-1.43.0",
+    "Def-ItemStringParser-2.0.0"
+  ]
 }

@@ -24,6 +24,7 @@ namespace BazaarIsMyHaven
     [BepInDependency("com.funkfrog_sipondo.sharesuite", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(ItemStringParser.ItemStringParser.PluginGUID)]
     [BepInIncompatibility("com.Lunzir.BazaarLunarForEveryone")]
+    [BepInIncompatibility("Def.BazaarIsMyHaven")] //Temporary until original mod author updates their mod, then this one goes bye bye
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
     public class Main : BaseUnityPlugin
@@ -32,9 +33,9 @@ namespace BazaarIsMyHaven
         public static Main instance;
 
         public const string PluginGUID = PluginAuthor + "." + PluginName;
-        public const string PluginAuthor = "Def";
-        public const string PluginName = "BazaarIsMyHaven";
-        public const string PluginVersion = "4.2.0";
+        public const string PluginAuthor = "Weeb";
+        public const string PluginName = "BazaarIsMyNetwork-Rerolled";
+        public const string PluginVersion = "5.0.0";
 
         private static System.Random Random = new System.Random();
         private static readonly Dictionary<(Type type, string address), AsyncOperationHandle> debugAssets = new Dictionary<(Type, string), AsyncOperationHandle>();
