@@ -10,8 +10,8 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
   - Buds make a return, now you can have more than 5 buds with Shop features up to 20. They have all the traditional functionality and animations and can even swap lunar equipment.
         - This had a consequence of revealing limitations of the RoR2 Networking, scale was not synced.
             - Terminals where originally used to mask this problem.
-  - Shop Terminals not retaining scale for clients when using lunar buds, now they can
-        - As a server sided mod, clients will use a fallback method that spawns a prefab that has a network controller on it to use a RPC teleport command. This sets the scale to 1, 1, 1 for the client, allowing the client to see lunar buds at their original scale when you didn't have the mod, rather than the .5 scale their prefab is at
+  - Lunar Buds not retaining scale for clients when using lunar buds, now they can
+        - As a server sided mod, clients will use a fallback method that spawns a prefab that has a ItemShareController on it to use a RPCParentToMuzzle command. This sets the scale to [1, 1, 1] for the client, allowing the client to see lunar buds at their original scale when you didn't have the mod, rather than the .5 scale their prefab is at
   - as a consequence to the above, lunar buds can also most of the features that where limited to shipping terminals. 1-20 can exist, they can grow in number as the rounds progress, etc.
   - Re-rolling was fixed, it was broken for what ever reason but now it works with extra features
       - It also has additional checks and bookkeeping to ensure it works for both clients and host.
