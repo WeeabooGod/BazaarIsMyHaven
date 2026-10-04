@@ -415,7 +415,7 @@ namespace BazaarIsMyHaven
             var identity = instance.GetComponent<NetworkIdentity>();
             var connection = pc.networkUser ? pc.networkUser.connectionToClient : null;
 
-            if (connection == null || !connection.isReady || identity.observers == null || !identity.observers.Contains(connection) || Util.ConnectionIsLocal(connection))
+            if (connection == null || !connection.isReady || !identity || identity.observers == null || !identity.observers.Contains(connection) || Util.ConnectionIsLocal(connection))
             {
                 return false;
             }

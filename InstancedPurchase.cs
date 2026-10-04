@@ -10,6 +10,7 @@ namespace BazaarIsMyHaven
         public readonly InstancedPurchaseStruct original = new InstancedPurchaseStruct();
         public Dictionary<PlayerCharacterMasterController, InstancedPurchaseStruct> purchases = new Dictionary<PlayerCharacterMasterController, InstancedPurchaseStruct>();
         public PlayerCharacterMasterController pcClient;
+        public int lunarShopIndex = -1;
 
         private readonly HashSet<PlayerCharacterMasterController> pendingUpdates = new HashSet<PlayerCharacterMasterController>();
         private readonly Dictionary<PlayerCharacterMasterController, NetworkConnection> initializedClients = new Dictionary<PlayerCharacterMasterController, NetworkConnection>();
@@ -32,10 +33,29 @@ namespace BazaarIsMyHaven
                     hidden = original.hidden,
                     hasBeenPurchasedOnce = original.hasBeenPurchasedOnce
                 };
+                if (IsShopDisabledFor(pc))
+                {
+                    state.available = false;
+                    state.pickup = UniquePickup.none;
+                    state.hasBeenPurchased = true;
+                }
                 purchases.Add(pc, state);
             }
 
             return state;
+        }
+
+        //Primarily for character-specific shop amounts
+        private bool IsShopDisabledFor(PlayerCharacterMasterController pc)
+        {
+            if (lunarShopIndex < 0 || !pc.master || !pc.master.bodyPrefab)
+                return false;
+
+            var bodyIndex = BodyCatalog.FindBodyIndex(pc.master.bodyPrefab);
+            if (!ModConfig.LunarShopAmountDependingOnCharacterParsed.TryGetValue(bodyIndex, out int amount))
+                return false;
+
+            return amount >= 0 && lunarShopIndex >= amount;
         }
 
         //Jebus this is a condensed function, its cool you can do this, but I want to learn this and stop having to google it all the time, so how does it work?
@@ -44,6 +64,10 @@ namespace BazaarIsMyHaven
         //Finally the ternary operator ( : ) means if pc is valid and purchase state was found, return state, otherwise return original
         public InstancedPurchaseStruct GetOrOriginal(PlayerCharacterMasterController pc)
         {
+            // Apply character limits when a player is first seen, including late joins.
+            if (pc && !purchases.ContainsKey(pc) && IsShopDisabledFor(pc))
+                return GetOrCreate(pc);
+
             return pc && purchases.TryGetValue(pc, out var state) ? state : original;
         }
 
@@ -71,7 +95,7 @@ namespace BazaarIsMyHaven
                 }
 
                 var connection = pc.networkUser ? pc.networkUser.connectionToClient : null;
-                if (connection == null ||!connection.isReady || !identity || !identity.observers.Contains(connection))
+                if (connection == null || !connection.isReady || !identity || identity.observers == null || !identity.observers.Contains(connection))
                 {
                     initializedClients.Remove(pc);
                     continue;
