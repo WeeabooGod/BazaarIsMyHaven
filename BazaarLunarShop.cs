@@ -80,9 +80,11 @@ namespace BazaarIsMyHaven
         }
         public override void SetupBazaar()
         {
+            // Recycler uses reset each visit, even when the original shops are kept.
+            lunarRecyclerRerolledCount = 0;
+
             if (ModConfig.LunarShopSectionEnabled.Value)
             {
-                lunarRecyclerRerolledCount = 0;
                 generateNewPickupIndex = 0;
                 whichStallsHaveBeenBoughtOnce.Clear();
                 SpawnLunarShopTerminal();
@@ -103,7 +105,7 @@ namespace BazaarIsMyHaven
                         self.costType = CostTypeIndex.LunarCoin;
                     }
                 }
-                if (ModConfig.LunarShopSectionEnabled.Value)
+                if (ModConfig.LunarRecyclerSectionEnabled.Value)
                 {
                     if (self.name.StartsWith("LunarRecycler"))
                     {
@@ -163,7 +165,7 @@ namespace BazaarIsMyHaven
                 return;
             }
 
-            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active)
+            if (ModConfig.EnableMod.Value && IsCurrentMapInBazaar() && NetworkServer.active && (ModConfig.LunarShopSectionEnabled.Value || ModConfig.LunarRecyclerSectionEnabled.Value))
             {
                 var body = activator ? activator.GetComponent<CharacterBody>() : null;
                 var player = body && body.master ? body.master.playerCharacterMasterController : null;
@@ -175,7 +177,7 @@ namespace BazaarIsMyHaven
 
                 // Shops/Terminals are already in the dictionary before anyone purchases them. Each sart with an empty buyer list
                 // TryGetValue identifies tracked shops buyers.contains(player) determins whether that player bought it.
-                if (whichStallsHaveBeenBoughtOnce.TryGetValue(self, out var buyers))
+                if (ModConfig.LunarShopSectionEnabled.Value && whichStallsHaveBeenBoughtOnce.TryGetValue(self, out var buyers))
                 {
                     var playerState = Main.instance.GetPlayerStruct(player);
                     bool firstPurchase = !buyers.Contains(player);
@@ -214,7 +216,7 @@ namespace BazaarIsMyHaven
 
                 if (self.name.StartsWith("LunarRecycler"))
                 {
-                    if (!self.available || (ModConfig.LunarRecyclerRerollLimit.Value >= 0 && lunarRecyclerRerolledCount >= ModConfig.LunarRecyclerRerollLimit.Value))
+                    if (!self.available || (ModConfig.LunarRecyclerSectionEnabled.Value && ModConfig.LunarRecyclerRerollLimit.Value >= 0 && lunarRecyclerRerolledCount >= ModConfig.LunarRecyclerRerollLimit.Value))
                     {
                         return;
                     }
@@ -224,22 +226,29 @@ namespace BazaarIsMyHaven
                         return;
                     }
 
-                    lunarRecyclerRerolledCount++;
-                    if (ModConfig.LunarRecyclerRerollLimit.Value >= 0)
+                    if (ModConfig.LunarRecyclerSectionEnabled.Value)
                     {
-                        int rerollsLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
-                        ChatHelper.LunarRecyclerUsesLeft(rerollsLeft);
-                        if (rerollsLeft <= 0)
+                        lunarRecyclerRerolledCount++;
+                        if (ModConfig.LunarRecyclerRerollLimit.Value >= 0)
                         {
-                            self.SetAvailable(false);
+                            int rerollsLeft = ModConfig.LunarRecyclerRerollLimit.Value - lunarRecyclerRerolledCount;
+                            ChatHelper.LunarRecyclerUsesLeft(rerollsLeft);
+                            if (rerollsLeft <= 0)
+                            {
+                                self.SetAvailable(false);
+                            }
                         }
                     }
 
-                    float delay = 0f;
-                    foreach (var shop in ObjectLunarShopTerminals_Spawn)
+                    // The original purchase handles vanilla buds. Refresh only our replacement shops herencluding when the recycler uses its default settings.
+                    if (ModConfig.LunarShopSectionEnabled.Value)
                     {
-                        Main.instance.StartCoroutine(DelayRerollEffect(shop, delay));
-                        delay += 0.1f;
+                        float delay = 0f;
+                        foreach (var shop in ObjectLunarShopTerminals_Spawn)
+                        {
+                            Main.instance.StartCoroutine(DelayRerollEffect(shop, delay));
+                            delay += 0.1f;
+                        }
                     }
 
                     return;
@@ -251,7 +260,7 @@ namespace BazaarIsMyHaven
 
         private void PurchaseInteraction_ScaleCost(On.RoR2.PurchaseInteraction.orig_ScaleCost orig, PurchaseInteraction self, float scalar)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
+            if (ModConfig.EnableMod.Value && ModConfig.LunarRecyclerSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
                 if (self.name.StartsWith("LunarRecycler"))
                 {
@@ -262,7 +271,7 @@ namespace BazaarIsMyHaven
         }
         private void PurchaseInteraction_SetAvailable(On.RoR2.PurchaseInteraction.orig_SetAvailable orig, PurchaseInteraction self, bool newAvailable)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
+            if (ModConfig.EnableMod.Value && ModConfig.LunarRecyclerSectionEnabled.Value && ModConfig.LunarRecyclerAvailable.Value && IsCurrentMapInBazaar() && NetworkServer.active)
             {
                 if (self.name.StartsWith("LunarRecycler"))
                 {
