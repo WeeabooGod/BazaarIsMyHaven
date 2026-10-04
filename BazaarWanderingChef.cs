@@ -39,13 +39,23 @@ namespace BazaarIsMyHaven
 
         public override void RunStart()
         {
-            if (ModConfig.WanderingChefSectionEnabled.Value && !ModConfig.WanderingChefUnrestrictedCrafting.Value)
+            RunEnd();
+            if (ModConfig.EnableMod.Value && ModConfig.WanderingChefSectionEnabled.Value && !ModConfig.WanderingChefUnrestrictedCrafting.Value)
             {
                 allAvailableRecipes = GetAvailableRecipes();
                 allAvailableTargetPickupIndexes = allAvailableRecipes.Keys.ToArray();
                 randomTargetPickupIndex = RNG.Next(allAvailableTargetPickupIndexes.Length);
             }
         }
+
+        public override void RunEnd()
+        {
+            allAvailableRecipes = null;
+            allAvailableTargetPickupIndexes = null;
+            possibleRecipes = null;
+            cauldron = null;
+        }
+
         public override void SetupBazaar()
         {
             if (ModConfig.WanderingChefSectionEnabled.Value)
@@ -177,7 +187,8 @@ namespace BazaarIsMyHaven
                             }
                             else if (pickupDef.equipmentIndex != EquipmentIndex.None)
                             {
-                                return InventoryContainsPickup(inventory, pickupDef.pickupIndex);
+                                int used = consumedIngredients.Count(pickup => pickup == pickupIndex);
+                                return used < InventoryPickupCount(inventory, pickupDef.pickupIndex);
                             }
                         }
                     }
@@ -224,27 +235,35 @@ namespace BazaarIsMyHaven
 
         private bool InventoryContainsPickup(Inventory inventory, PickupIndex pickup)
         {
+            return InventoryPickupCount(inventory, pickup) > 0;
+        }
+
+        private int InventoryPickupCount(Inventory inventory, PickupIndex pickup)
+        {
             var pickupDef = pickup.pickupDef;
+            if (!inventory || pickupDef == null)
+                return 0;
+
             if(pickupDef.itemIndex != ItemIndex.None)
             {
-                var count = inventory.GetItemCountPermanent(pickupDef.itemIndex);
-                return count > 0;
+                return inventory.GetItemCountPermanent(pickupDef.itemIndex);
             }
+            int count = 0;
             if(pickupDef.equipmentIndex != EquipmentIndex.None)
             {
                 for(var slot = 0; slot < inventory._equipmentStateSlots.Length; slot++)
                 {
                     for (var set = 0; set < inventory._equipmentStateSlots[slot].Length; set++)
                     {
-                        var equipmentStateSlot = inventory._equipmentStateSlots[slot][slot];
+                        var equipmentStateSlot = inventory._equipmentStateSlots[slot][set];
                         if (equipmentStateSlot.equipmentDef != null && equipmentStateSlot.equipmentDef.equipmentIndex == pickupDef.equipmentIndex)
                         {
-                            return true;
+                            count++;
                         }
                     }
                 }
             }
-            return false;
+            return count;
         }
 
         public CraftableCatalog.RecipeEntry[] FindRecipesThatCanAcceptIngredients(PickupIndex[] choices)
@@ -264,6 +283,7 @@ namespace BazaarIsMyHaven
                     if (allRecipe.recipe.CheckIfValidIngredient(pickupIndex))
                     {
                         list.Add(allRecipe);
+                        break;
                     }
                 }
             }
@@ -342,7 +362,7 @@ namespace BazaarIsMyHaven
 
         public void NextRecipe()
         {
-            if (allAvailableTargetPickupIndexes != null && allAvailableRecipes != null)
+            if (allAvailableTargetPickupIndexes != null && allAvailableTargetPickupIndexes.Length > 0 && allAvailableRecipes != null)
             {
                 randomTargetPickupIndex = (randomTargetPickupIndex + 1) % allAvailableTargetPickupIndexes.Length;
                 var pickupIndex = allAvailableTargetPickupIndexes[randomTargetPickupIndex];
@@ -360,6 +380,13 @@ namespace BazaarIsMyHaven
 
         private void SpawnWanderingChef()
         {
+            if (!ModConfig.WanderingChefUnrestrictedCrafting.Value &&
+                (allAvailableTargetPickupIndexes == null || allAvailableTargetPickupIndexes.Length == 0))
+            {
+                Log.LogWarning("No available recipes; skipping the Wandering Chef for this visit.");
+                return;
+            }
+
             var chefPos = new SpawnCardStruct(new Vector3(-70.7306f, -23.7171f, -30.4022f), new Vector3(0f, 220f, 0f));
             var cookingPlacePos = new SpawnCardStruct(new Vector3(-72.4183f, -24.4958f, -28.9289f), new Vector3(0f, 220f, 0f));
 
