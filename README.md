@@ -6,32 +6,33 @@ This is an independently maintained derivative of [BazaarIsMyHaven](https://thun
 
 The project aims to fix the issues of BazaarIsMyHaven while potentially introducing requested features as well.
 
-- **Fixed Features**
-  - Shop Terminals not retaining scale for clients, now they do
-      - As a server only mod, this was done by using the Drifterhoard prefab which includes ItemShareController.RpcParentToMuzzle procedure. This RPC function re-scales game-objects even for clients. I do not like this myself, but I wanted to keep this mod server-sided as best as I can
-          - The floating item display also had wonky scaling inconsistencies which are also fixed for clients
-          - This problem may have not been noticed by much, only really becomes noticeable with lunar buds. Terminals, which the original mod recommends have a scale of .75 so did not really appear that much smaller. Overall you also had to have the lunar shop section enabled all together.
-  - Re-rolling did not appear to work (when you had terminals and lunar shop modifications), now it does.
+- **New/Fixed Features**
+  - Buds make a return, now you can have more than 5 buds with Shop features up to 20. They have all the traditional functionality and animations and can even swap lunar equipment.
+        - This had a consequence of revealing limitations of the RoR2 Networking, scale was not synced.
+            - Terminals where originally used to mask this problem.
+  - Shop Terminals not retaining scale for clients when using lunar buds, now they can
+        - As a server sided mod, clients will use a fallback method that spawns a prefab that has a network controller on it to use a RPC teleport command. This sets the scale to 1, 1, 1 for the client, allowing the client to see lunar buds at their original scale when you didn't have the mod, rather than the .5 scale their prefab is at
+  - as a consequence to the above, lunar buds can also most of the features that where limited to shipping terminals. 1-20 can exist, they can grow in number as the rounds progress, etc.
+  - Re-rolling was fixed, it was broken for what ever reason but now it works with extra features
       - It also has additional checks and bookkeeping to ensure it works for both clients and host.
-  - Purchases being free was a deliberate choice due to the lack of a cost hologram, but with the ability to actually use lunar buds makes it less of an issue, so they now actually have a price on them.
-      - Lunar buds have the cost hologram, and it appears to be networked. Terminals do not for clients, but a solution was to create a single cost hologram based off a seers terminal clone for un-mooded clients. 
-  - Instancing not working correctly under specific circumstances
-      - Instancing also did not mesh well with re-rolling
-  - Buds make a return, now you can have more than 5 buds with Shop features up to 20. They have all the traditional functionality and animations and can even swap lunar equipment. 
+  - Purchases being free was a deliberate choice due to the lack of a cost hologram when using terminals, but with the ability to actually use lunar buds makes it less of an issue, so they now actually have a price on them.
+      - Lunar buds have the cost hologram, and it appears to be networked.
+  - Both shipping terminals and traditional lunar buds can also hold equipment for swapping, but beware, it will continue to cost you to swap
+  - As stated above, the terminal replacement will show cost on the shipping terminals, synced between clients who have the mod installed
+        - Those that do not have a mod uses the fallback discussed before, it will display the set cost to reduce any ambiguity of price. The work around is similar to syncing the scale for lunar buds. Host spawns a seers terminal then uses a network trick to kill the model of the terminal keeping only the price hologram, then teleporting it using built in network teleport to where it needs to be on the table.
 
-- **Reworked Features and Added Changes**
-  - Instancing was reworked to include extra states, a queue, and additional bookkeeping for use for re-rolling.
+- **Networked Features and Instancing**
+  - Proper bookkeeping for re-roll eligibility, stock and availability when using Instanced Purchases. Should be much more reliable. 
       - When instance purchases was on, various buggy interactions could happen. Host could buy an item, and clients would receive nothing on the same item. Re-roll would re-roll items already purchased from clients. Host was largely authoritative over tracking purchases.
-  - Correct buyer states; purchases temporarily use the buyer's shop data then restores the host's view.
-      - Instances also track for states to protect re-roll, and swapped equipment
-          - Old re-roll path called normal shop-generation. We can now skip purchased shops and have various states to ensure each instance client gets only what should be re-rolled. 
-  - Networking broadcast no longer overwrite personal fields; Original already sent targeted updates, but the game had normal synchronization. Broadcast should not overwrite everyone's individual stock or availability which often resulted in mismatching re-rolling.
+      - The proper bookkeeping allows reroll to respect host and client shop states, and wont reroll unavailable shops.
   - Client updates now arrive in order needed for animation, this is most useful for the buds which wouldn't open on purchases.
-  - Queued shop update system allows slow clients to process messages without causing mismatches.
+      - There is also a vanilla bug where buds wont open when purchased which should be fixed with the mod enabled
 
-- **New Features**
-  - ReplaceLunarShopsWithTerminals now have their cost hologram for host and for clients with the mod also installed. Un-modded clients will only have a single cost on the side of the table. No more price ambiguity.
-  - Technically discussed earlier, but a proper client side syncing is available for clients who have the mod installed. Offers a much more reliable, and cleaner way to adjust model size and corrections without having to resort to workarounds.
+- **Misc Additions**
+  - Configs will reload on a new run, so you can edit the config without having to restart. InLobbyConfig would make this even easier but continues to be an optional mod
+  - SPEX was concidered a newt for some reason, and would display a welcome message, the AI no longer hallucinates being a big blue glowing slug creature.
+  - Attempted to refine the stability of the mod as a whole, adding sanity checks, and cleaning up run bookkeeping earlier. Most problems where never verifiably a problem, but it never hurts being more careful.
+      - These sanity checks should help things not breaking so dramatically if and when they do break. There was even a risk of a negative value making cost be the upper limit of a uint, causing players to lose all their lunar coins not that ever happened to me though. If something was to break during init, creation, or a loop, it could break the entire function which can also interrupt other mods, not that I notice it ever happening.
 
 - **ToDo's**
   - Consider an optional rare Drone Recycler & Combiner to be added to the bazaar
@@ -45,7 +46,7 @@ This was my own summarization of what I understand. Me, the human. I am a goblin
 
 The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling and unity networking in general. I already know I am going to hell for this, but I suppose I shall share my carefully curated verified and tested slop to the masses. 
 
-I did not use code wholesale. I would be given a list based on a read-only review of the project of what I COULD do, then I look through that list and implement where I see fit. I would copy comments where useful, and try to write my own on how I understand it. I am not godly at programming myself, so my approach was Astra being a helper, not a do-it-for-me-all-the-way with no review.
+I did not use code wholesale. I would be given a list based on a read-only review of the project of what I COULD do, then I look through that list and implement where I see fit. I would copy comments where useful, and try to write my own on how I understand it. While I am no expert at programming, I do have actual experience with programming. I only used AI to help me where I struggled, and even then I only ever wanted to see examples and goals of what I could do, not have it done for me.
 
 My main goal is to fix bugs that existed. Through my own testing, as much as I can do alone and with UnityExplorer and MultiplayerTesting mod have confirmed some form of stability. Please, if any problems where found, report and I'll try to fix.
 
@@ -59,9 +60,9 @@ Project was edited and made with Visual Studio Community 2026 with the **.NET de
 ## Known Issues / Multiplayer Considerations
 
 Most host to clients-without-mods functions offer workarounds to provide solutions to problems. 
-1. Create a Drifterhoard to hook its networked object to properly scale lunarbuds and lunarshopterminals to their proper size isint its build in RPC commands. This means a drifterhoard will exist in scene
+1. Create a Drifterhoard to hook its networked object to properly scale lunarbuds to their proper size through its buildtin RPC commands. This means a drifterhoard will exist in scene
 2. Create a copy of a seer terminal to have a common sale price on the table for lunar terminals. terminals do not have a cost hologram, leaving what it price could be ambiguous. It has a similar philosophy to the above.
 
-Host will not generate these work around's alone, or with other clients that have the mod installed.
+Host will not generate these work around's alone, or with other clients that have the mod installed. Host can choose to even have these fallbacks used, though if so, I'd recommend using replacelunarbuds as they wont have a scale problem.
 
 Its also currently possible slow clients could experience issues with delays in model size corrections, or have it not work entirely, but this should be rare.
