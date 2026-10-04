@@ -36,19 +36,23 @@ The project aims to fix the issues of BazaarIsMyHaven while potentially introduc
 This was my own summarization of what I understand. Me, the human. I am a goblin with no experience in creating git commits. I usually never share my work, my commits will be as horrible as can be, Apologies. I aimed to understand what I was doing, despite the assistance I was receiving... speaking of assistance...
 
 ---
-**AI WAS USED TO HELP CREATE THIS** - Specifically GPT-6 Astra at Extra High
+**AI WAS USED** - Specifically GPT-6 Astra at Extra High
 
-The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling. I already know I am going to hell for this, but I suppose I shall share my carefully curated verified and tested slop to the masses.
+The death-mark a project. Primarily used to help probe solutions for complex problems, like scale not being synced, and networked re-rolling and unity networking in general. I already know I am going to hell for this, but I suppose I shall share my carefully curated verified and tested slop to the masses. 
 
-I did not use code wholesale. Any assistance that was given was in pieces, layered with advice and constant refining. At any given moment I always picked apart anything that was given, I aimed to actually tried to find real solutions. I hope to be believed on this, despite the Internets aversion to AI usage. Astra was used to help initialize the project in the very beginning. Despite my usage, it was only used to fix problems. Existing code was only modified where I felt fit, by me, myself, and I. I want to believe I still put a lot of work into this to prevent any of the usual reasons people avoid AI. I am even open to suggestions on changes and improvements. All I want to do is make a mod I like using work a bit better.
+I did not use code wholesale. I would be given a list based on a read-only review of the project of what I COULD do, then I look through that list and implement where I see fit. I would copy comments where useful, and try to write my own on how I understand it. I am not godly at programming myself, so my approach was Astra being a helper, not a do-it-for-me-all-the-way with no review.
+
+My main goal is to fix bugs that existed. Through my own testing, as much as I can do alone and with UnityExplorer and MultiplayerTesting mod have confirmed some form of stability. Please, if any problems where found, report and I'll try to fix.
+
+Original mod remains completely functional, please use that if you still do not trust me.
 
 ---
 Please refer to Deflaktor's [full documentation](https://github.com/Deflaktor/BazaarIsMyHaven) for the complete list of features. I only went over what I changed and fixed.
 
-## Building 
+## Building
 Project was edited and made with Visual Studio Community 2026 with the **.NET desktop development** workload and .NET SDK **10.0.401 or a later stable 10.0 feature band**. the supplied .csproj should still work for other IDE's though.
 
-# Known Issues / Multiplayer Considerations
+## Known Issues / Multiplayer Considerations
 
 I tested what I could being a lonely guy with no friends, but scale syncing appears to work now, for modded clients or un-modded. Client having the mod is completely optional, but if they do have it, they get some extra features. If Replace Lunar with Terminals is active, lunar terminals now have their cost on the terminals. It still remains unsolved if I can spawn the cost sign for un-modded clients.
 
