@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Bootstrap;
 using RoR2;
+using RoR2.Networking;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -287,8 +288,17 @@ namespace BazaarIsMyHaven
 
         private void ShopTerminalBehavior_DropPickup(On.RoR2.ShopTerminalBehavior.orig_DropPickup orig, ShopTerminalBehavior self)
         {
-            if (ModConfig.EnableMod.Value && ModConfig.LunarShopSectionEnabled.Value && IsCurrentMapInBazaar() && NetworkServer.active && self.name.StartsWith("LunarShopTerminal"))
+            if (ModConfig.EnableMod.Value && IsCurrentMapInBazaar() && NetworkServer.active && self.name.StartsWith("LunarShopTerminal"))
             {
+                if (!ModConfig.LunarShopSectionEnabled.Value)
+                {
+                    orig(self);
+                    // Vanilla buds also need the purchased flag before their pickup is cleared on clients.
+                    // This is suprisingly, a vanilla bug! Exists in the actual game, apperently.
+                    SendPurchasedFlagToClients(self);
+                    return;
+                }
+
                 if (ModConfig.LunarShopBuyToInventory.Value)
                 {
                     var body = currentActivator && currentActivator.master ? currentActivator.master.GetBody() : null;
@@ -482,9 +492,55 @@ namespace BazaarIsMyHaven
                 terminal.SetPickup(pickup, false);
             }
 
+            SpawnRerollEffect(shop, instance);
+        }
+
+        private void SpawnRerollEffect(GameObject shop, InstancedPurchase instance)
+        {
+            if (EffectManager.DisableAllEffectSpawning)
+            {
+                return;
+            }
+
             //Account for Bud and Terminal Differences
             float height = ModConfig.LunarShopReplaceLunarBudsWithTerminals.Value ? -2.5f : 2.5f;
-            SpawnEffect(LunarRerollEffect, shop.transform.position + Vector3.up * height, new Color32(255, 255, 255, 255), 2f);
+            var prefab = LunarRerollEffect.WaitForCompletion();
+            var effectData = new EffectData
+            {
+                origin = shop.transform.position + Vector3.up * height,
+                rotation = Quaternion.identity,
+                scale = 2f,
+                color = new Color32(255, 255, 255, 255)
+            };
+
+            if (!instance)
+            {
+                EffectManager.SpawnEffect(prefab, effectData, transmit: true);
+                return;
+            }
+
+            // Use the game's existing effect message so clients without the mod also understand it.
+            var message = new EffectManager.EffectMessage
+            {
+                effectIndex = EffectCatalog.FindEffectIndexFromPrefab(prefab),
+                effectData = effectData
+            };
+            var recipients = new HashSet<NetworkConnection>();
+
+            foreach (var player in PlayerCharacterMasterController.instances)
+            {
+                if (!player || !instance.GetOrOriginal(player).CanReroll)
+                {
+                    continue;
+                }
+
+                // This includes the host's local connection send once per client, only for eligible stock.
+                var connection = player.networkUser ? player.networkUser.connectionToClient : null;
+                if (connection != null && connection.isReady && recipients.Add(connection))
+                {
+                    connection.SendByChannel(UmsgType.Effect, message, QosChannelIndex.effects.intVal);
+                }
+            }
         }
 
         public static List<Vector2> GenerateCirclePoints(float radius, float startAngle, float endAngle, float orientation, int numberOfPoints)

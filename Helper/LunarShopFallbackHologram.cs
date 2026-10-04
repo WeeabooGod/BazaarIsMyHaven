@@ -17,7 +17,7 @@ namespace BazaarIsMyHaven
     {
         // Desired WORLD position and rotation of the hologram, not the station root. Rotation is in X/Y/Z degrees.
         private static readonly Vector3 HologramWorldPosition = new Vector3(-80.32f, -24.8f, -36.8f);
-        private static readonly Vector3 HologramWorldEulerAngles = new Vector3(0f, 180f, 0f);
+        private static readonly Vector3 HologramWorldEulerAngles = new Vector3(0f, 140f, 0f);
         private static readonly Vector3 SetupPosition = new Vector3(0f, 10000f, 0f);
         private static AsyncOperationHandle<GameObject> seerStationPrefab;
 
