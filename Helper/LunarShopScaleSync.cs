@@ -87,10 +87,9 @@ namespace BazaarIsMyHaven
             var terminal = shop.GetComponent<ShopTerminalBehavior>();
             if (terminal && terminal.pickupDisplay)
             {
-                // The item model caches its size when created. Invalidate the prefab cache so even
-                // an unchanged item is rebuilt at the corrected scale, without rerolling stock.
+                // Rebuild at the corrected scale without rerolling stock.
+                // RebuildModel needs modelPrefab intact to identify and clean up the previous model.
                 var display = terminal.pickupDisplay;
-                display.modelPrefab = null;
                 display.RebuildModel(null);
             }
         }
