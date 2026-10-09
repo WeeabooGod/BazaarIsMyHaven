@@ -251,12 +251,13 @@ namespace BazaarIsMyHaven
             int count = 0;
             if(pickupDef.equipmentIndex != EquipmentIndex.None)
             {
-                for(var slot = 0; slot < inventory._equipmentStateSlots.Length; slot++)
+                // Count every equipment slot and set through the inventory's public accessors.
+                for (uint slot = 0; slot < inventory.GetEquipmentSlotCount(); slot++)
                 {
-                    for (var set = 0; set < inventory._equipmentStateSlots[slot].Length; set++)
+                    for (uint set = 0; set < inventory.GetEquipmentSetCount(slot); set++)
                     {
-                        var equipmentStateSlot = inventory._equipmentStateSlots[slot][set];
-                        if (equipmentStateSlot.equipmentDef != null && equipmentStateSlot.equipmentDef.equipmentIndex == pickupDef.equipmentIndex)
+                        var equipmentState = inventory.GetEquipment(slot, set);
+                        if (equipmentState.equipmentIndex == pickupDef.equipmentIndex)
                         {
                             count++;
                         }
