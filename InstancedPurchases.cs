@@ -371,11 +371,9 @@ namespace BazaarIsMyHaven
                     terminal.hidden = !originalHidden;
                 }
 
-                // Hidden alone does not rebuild the display. Apply it first, then resend the
-                // same pickup to show the alternate model. Repeat with the real hidden value.
-                // These temporary values are only used while serializing this client's messages.
-                var hideMessage = CreateUpdateMessage(identity, channel, HiddenMask, 0u);
-                var alternateModelMessage = CreateUpdateMessage(identity, channel, PickupMask, 0u);
+                // Hidden alone does not refresh the display. Send the temporary value first;
+                // this change is only used while serializing this client's messages.
+                var toggleHiddenMessage = CreateUpdateMessage(identity, channel, HiddenMask, 0u);
 
                 if (state != null)
                 {
@@ -386,13 +384,15 @@ namespace BazaarIsMyHaven
                     terminal.hidden = originalHidden;
                 }
 
-                var restoreHiddenMessage = CreateUpdateMessage(identity, channel, HiddenMask, 0u);
+                // Vanilla reads pickup before hidden: rebuild with the temporary hidden value,
+                // then restore the real value in the same message. The final pickup update
+                // rebuilds the intended display, without changing its item or purchase state.
+                var restoreHiddenMessage = CreateUpdateMessage(identity, channel, PickupMask | HiddenMask, 0u);
                 var restoreModelMessage = CreateUpdateMessage(identity, channel, PickupMask, 0u);
                 var writer = new NetworkWriter();
-                foreach (var message in new[] { hideMessage, alternateModelMessage, restoreHiddenMessage, restoreModelMessage })
-                {
-                    writer.Write(message, message.Length);
-                }
+                writer.Write(toggleHiddenMessage, toggleHiddenMessage.Length);
+                writer.Write(restoreHiddenMessage, restoreHiddenMessage.Length);
+                writer.Write(restoreModelMessage, restoreModelMessage.Length);
 
                 return writer.ToArray();
             }
